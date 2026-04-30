@@ -2,7 +2,7 @@
 
 Kotlin · Jetpack Compose · Firebase Auth + Firestore · Room (offline-first) · MVVM · Navigation Compose · Material 3
 
-This repository is the source code for **WildTrail**, an Android hiking app built as a university-exam project for the AI Engineering programme. It demonstrates the **Modern Android Development (MAD)** stack end-to-end: a single-Activity Compose UI, MVVM with `StateFlow`, repository-pattern data layer with offline-first caching to Room, and a remote Firestore + Firebase Auth backend wired through a manual dependency-injection container.
+This repository is the source code for **WildTrail**, an Android hiking app. It demonstrates the **Modern Android Development (MAD)** stack end-to-end: a single-Activity Compose UI, MVVM with `StateFlow`, repository-pattern data layer with offline-first caching to Room, and a remote Firestore + Firebase Auth backend wired through a manual dependency-injection container.
 
 ---
 
@@ -518,4 +518,4 @@ These features are mentioned in the project brief but were too large to ship ins
 
 ---
 
-Built for Giovanni Zara's AI-Engineering exam. Have fun on the trails. 🌲
+Have fun on the trails. 🌲
