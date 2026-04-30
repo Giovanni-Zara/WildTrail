@@ -1,0 +1,130 @@
+package com.wildtrail.app.testing
+
+import com.wildtrail.app.data.local.dao.UserDao
+import com.wildtrail.app.data.local.entity.UserEntity
+import com.wildtrail.app.data.remote.FirebaseAuthService
+import com.wildtrail.app.data.remote.FirestoreService
+import com.wildtrail.app.data.repository.AuthRepository
+import com.wildtrail.app.data.repository.AuthState
+import com.wildtrail.app.domain.model.User
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+
+/** Convenience factory for building a [User] in tests. */
+fun testUser(
+    uid: String = "uid-1",
+    name: String = "tester",
+): User = User(
+    firebaseUid = uid,
+    username = name,
+    age = 28,
+    country = "IT",
+    level = 1,
+    xpPoints = 0,
+    totalDistanceKm = 0f,
+    totalHikesCount = 0,
+    profilePictureUrl = null,
+    bio = null,
+    createdAt = 0L,
+    lastActive = 0L,
+    isPublic = true,
+)
+
+/**
+ * In-memory [UserDao]. UserDao is an interface, so we just implement it
+ * directly with a [MutableStateFlow]-backed map.
+ */
+class FakeUserDao : UserDao {
+    private val state = MutableStateFlow<Map<String, UserEntity>>(emptyMap())
+
+    override suspend fun upsert(user: UserEntity) {
+        state.value = state.value + (user.firebaseUid to user)
+    }
+
+    override suspend fun upsertAll(users: List<UserEntity>) {
+        state.value = state.value + users.associateBy { it.firebaseUid }
+    }
+
+    override suspend fun update(user: UserEntity) = upsert(user)
+
+    override suspend fun getById(uid: String): UserEntity? = state.value[uid]
+
+    override fun observeById(uid: String): Flow<UserEntity?> =
+        state.map { it[uid] }
+
+    override fun observeLeaderboard(limit: Int): Flow<List<UserEntity>> =
+        state.map { it.values.toList() }
+
+    override suspend fun searchByUsername(q: String): List<UserEntity> =
+        state.value.values.filter { it.username.contains(q, ignoreCase = true) }
+
+    override suspend fun deleteById(uid: String) {
+        state.value = state.value - uid
+    }
+
+    override suspend fun clear() {
+        state.value = emptyMap()
+    }
+}
+
+/**
+ * Pre-stubbed [FirebaseAuthService] mock. We must stub [authStateFlow] before
+ * the parent [AuthRepository] constructor runs — otherwise the stateIn block
+ * will NPE on a default-mock null return. mockito-kotlin's `mock { ... }`
+ * DSL stubs at mock-creation time, which is exactly what we need.
+ *
+ * (Mockito 5+ uses the inline mock-maker by default, so it handles `open`
+ * classes with non-trivial constructors fine.)
+ */
+fun stubAuthService(): FirebaseAuthService = mock {
+    on { authStateFlow() } doReturn flowOf(null)
+}
+
+/** Stub [FirestoreService] — null db means it never hits Firebase. */
+fun stubFirestoreService(): FirestoreService = FirestoreService(db = null)
+
+/**
+ * Fake [AuthRepository] used by view-model tests. Extends the production
+ * class, pre-stubs the heavy collaborators, and overrides only what the
+ * tests touch.
+ */
+class FakeAuthRepository : AuthRepository(
+    authService = stubAuthService(),
+    firestore = stubFirestoreService(),
+    userDao = FakeUserDao(),
+    externalScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+) {
+
+    private val _authState = MutableStateFlow<AuthState>(AuthState.SignedOut)
+    override val authState: StateFlow<AuthState> = _authState
+
+    var nextResult: Result<User> = Result.success(testUser())
+    var signInCalls = 0
+    var signUpCalls = 0
+    var signOutCalls = 0
+
+    override suspend fun signIn(email: String, password: String): Result<User> {
+        signInCalls++
+        nextResult.onSuccess { _authState.value = AuthState.SignedIn(it) }
+        return nextResult
+    }
+
+    override suspend fun signUp(email: String, password: String, username: String): Result<User> {
+        signUpCalls++
+        nextResult.onSuccess { _authState.value = AuthState.SignedIn(it) }
+        return nextResult
+    }
+
+    override fun signOut() {
+        signOutCalls++
+        _authState.value = AuthState.SignedOut
+    }
+}

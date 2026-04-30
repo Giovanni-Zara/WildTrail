@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gcm_defaultSenderId" translatable="false">460981604806</string>
+    <string name="google_api_key" translatable="false">AIzaSyBpLWTp1paG0rvxnqDAMIxYQO4LlaraFQs</string>
+    <string name="google_app_id" translatable="false">1:460981604806:android:07040bc0929033f24c62c7</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBpLWTp1paG0rvxnqDAMIxYQO4LlaraFQs</string>
+    <string name="google_storage_bucket" translatable="false">wildtrail-dev-4de14.firebasestorage.app</string>
+    <string name="project_id" translatable="false">wildtrail-dev-4de14</string>
+</resources>

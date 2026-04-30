@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="error_red">#B00020</color>
+    <color name="forest_primary">#2E5D3A</color>
+    <color name="forest_primary_dark">#16321F</color>
+    <color name="moss_secondary">#7DA66D</color>
+    <color name="sky_tertiary">#4F8FBF</color>
+    <color name="surface_dark">#11130E</color>
+    <color name="surface_light">#F8F5F0</color>
+    <color name="trail_brown">#8B5E3C</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">WildTrail</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_have_account">Already have an account? Log in</string>
+    <string name="auth_login">Log in</string>
+    <string name="auth_no_account">No account yet? Sign up</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_signup">Sign up</string>
+    <string name="auth_tagline">Track. Discover. Share.</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_welcome">Welcome to WildTrail</string>
+    <string name="error_generic">Something went wrong. Try again.</string>
+    <string name="gcm_defaultSenderId" translatable="false">460981604806</string>
+    <string name="google_api_key" translatable="false">AIzaSyBpLWTp1paG0rvxnqDAMIxYQO4LlaraFQs</string>
+    <string name="google_app_id" translatable="false">1:460981604806:android:07040bc0929033f24c62c7</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBpLWTp1paG0rvxnqDAMIxYQO4LlaraFQs</string>
+    <string name="google_storage_bucket" translatable="false">wildtrail-dev-4de14.firebasestorage.app</string>
+    <string name="loading">Loading…</string>
+    <string name="nav_explore">Explore</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_social">Social</string>
+    <string name="nav_track">Track</string>
+    <string name="offline_banner">You\'re offline — showing cached data</string>
+    <string name="project_id" translatable="false">wildtrail-dev-4de14</string>
+    <string name="track_distance">Distance</string>
+    <string name="track_duration">Duration</string>
+    <string name="track_elevation">Elevation</string>
+    <string name="track_pause">Pause</string>
+    <string name="track_resume">Resume</string>
+    <string name="track_speed">Avg speed</string>
+    <string name="track_start">Start hike</string>
+    <string name="track_steps">Steps</string>
+    <string name="track_stop">Finish</string>
+    <style name="Theme.WildTrail" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@color/surface_light</item>
+    </style>
+    <style name="Theme.WildTrail.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/forest_primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.WildTrail</item>
+    </style>
+</resources>

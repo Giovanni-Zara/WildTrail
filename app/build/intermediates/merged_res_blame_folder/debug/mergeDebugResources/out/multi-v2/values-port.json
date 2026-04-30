@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.wildtrail.app-mergeDebugResources-89:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Giovanni\\.gradle\\caches\\8.10.2\\transforms\\dbaa79741a070132d1065440897c06a1\\transformed\\appcompat-1.6.1\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}

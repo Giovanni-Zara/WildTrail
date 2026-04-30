@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.wildtrail.app-mergeDebugResources-89:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Giovanni\\.gradle\\caches\\8.10.2\\transforms\\718ee6bf4343aea526c5f08db1e07758\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}
