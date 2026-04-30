@@ -1,0 +1,198 @@
+package com.wildtrail.app.ui.tracking
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.wildtrail.app.WildTrailApp
+import com.wildtrail.app.data.repository.AuthRepository
+import com.wildtrail.app.data.repository.AuthState
+import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.domain.model.GeoPoint
+import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.SurfaceType
+import com.wildtrail.app.util.HikeMath
+import com.wildtrail.app.util.LocationTracker
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.UUID
+
+/**
+ * UI state for the live-tracking screen.
+ *
+ *  - [routePoints]: the trace as we've collected it so far. Drawn as a
+ *                   polyline on the map and used to compute distance / gain.
+ *  - [status]:      finite-state machine for IDLE → RECORDING → PAUSED → STOPPED.
+ */
+data class TrackingUiState(
+    val status: TrackingStatus = TrackingStatus.IDLE,
+    val routePoints: List<GeoPoint> = emptyList(),
+    val distanceKm: Float = 0f,
+    val elevationGainM: Int = 0,
+    val durationSec: Long = 0L,
+    val avgSpeedKmh: Float = 0f,
+    val hasPermission: Boolean = false,
+    val errorMessage: String? = null,
+    val saved: Boolean = false,
+)
+
+enum class TrackingStatus { IDLE, RECORDING, PAUSED, STOPPED }
+
+class TrackingViewModel(
+    private val locationTracker: LocationTracker,
+    private val hikeLogRepository: HikeLogRepository,
+    private val authRepository: AuthRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(TrackingUiState())
+    val uiState: StateFlow<TrackingUiState> = _uiState.asStateFlow()
+
+    /** Current location-collection job; cancelled on pause/stop. */
+    private var locationJob: Job? = null
+    private var startTimeMs: Long = 0L
+    private var elapsedBeforePauseMs: Long = 0L
+
+    init {
+        _uiState.update { it.copy(hasPermission = locationTracker.hasLocationPermission()) }
+    }
+
+    fun onPermissionResult(granted: Boolean) {
+        _uiState.update { it.copy(hasPermission = granted) }
+    }
+
+    fun start() {
+        if (!locationTracker.hasLocationPermission()) {
+            _uiState.update { it.copy(errorMessage = "Location permission required") }
+            return
+        }
+        startTimeMs = System.currentTimeMillis()
+        elapsedBeforePauseMs = 0L
+        _uiState.update { it.copy(status = TrackingStatus.RECORDING, routePoints = emptyList(), errorMessage = null) }
+        beginCollecting()
+        beginTimer()
+    }
+
+    fun pause() {
+        if (_uiState.value.status != TrackingStatus.RECORDING) return
+        elapsedBeforePauseMs += System.currentTimeMillis() - startTimeMs
+        locationJob?.cancel()
+        _uiState.update { it.copy(status = TrackingStatus.PAUSED) }
+    }
+
+    fun resume() {
+        if (_uiState.value.status != TrackingStatus.PAUSED) return
+        startTimeMs = System.currentTimeMillis()
+        _uiState.update { it.copy(status = TrackingStatus.RECORDING) }
+        beginCollecting()
+        beginTimer()
+    }
+
+    fun stop() {
+        locationJob?.cancel()
+        if (_uiState.value.status == TrackingStatus.RECORDING) {
+            elapsedBeforePauseMs += System.currentTimeMillis() - startTimeMs
+        }
+        _uiState.update { it.copy(status = TrackingStatus.STOPPED) }
+    }
+
+    /** Persist the recorded hike. Called from the "save" UI on the summary screen. */
+    fun saveHike(title: String, description: String?, surfaceType: SurfaceType, isPrivate: Boolean) {
+        val state = _uiState.value
+        val auth = authRepository.authState.value
+        if (auth !is AuthState.SignedIn) {
+            _uiState.update { it.copy(errorMessage = "You must be signed in to save a hike") }
+            return
+        }
+        val now = System.currentTimeMillis()
+        val durationSec = state.durationSec
+        val hike = HikeLog(
+            hikeId = UUID.randomUUID().toString(),
+            creatorFirebaseUid = auth.user.firebaseUid,
+            workoutId = null,
+            title = title.ifBlank { "My hike" },
+            description = description,
+            avgSpeedKmh = state.avgSpeedKmh,
+            stepCount = 0,
+            caloriesBurned = HikeMath.estimateCalories(state.distanceKm, state.elevationGainM),
+            coverPhotoUrl = null,
+            xpEarned = HikeMath.xpFromHike(state.distanceKm, state.elevationGainM),
+            likesCount = 0,
+            surfaceType = surfaceType,
+            lengthKm = state.distanceKm,
+            durationSeconds = durationSec,
+            startedAt = now - durationSec * 1000L,
+            endedAt = now,
+            elevationGainMeters = state.elevationGainM,
+            routeCoordinates = state.routePoints,
+            isPrivate = isPrivate,
+        )
+        viewModelScope.launch {
+            runCatching { hikeLogRepository.saveHike(hike) }
+                .onSuccess { _uiState.update { it.copy(saved = true) } }
+                .onFailure { err ->
+                    _uiState.update { it.copy(errorMessage = err.message ?: "Could not save hike") }
+                }
+        }
+    }
+
+    fun resetAfterSave() {
+        _uiState.value = TrackingUiState(hasPermission = locationTracker.hasLocationPermission())
+    }
+
+    private fun beginCollecting() {
+        locationJob = viewModelScope.launch {
+            try {
+                locationTracker.observeLocation(intervalMs = 2_000L).collect { point ->
+                    _uiState.update { state ->
+                        val newRoute = state.routePoints + point
+                        val distanceKm = HikeMath.totalDistanceKm(newRoute)
+                        val gain = HikeMath.elevationGainMeters(newRoute)
+                        state.copy(
+                            routePoints = newRoute,
+                            distanceKm = distanceKm,
+                            elevationGainM = gain,
+                            avgSpeedKmh = HikeMath.avgSpeedKmh(distanceKm, state.durationSec),
+                        )
+                    }
+                }
+            } catch (e: SecurityException) {
+                _uiState.update { it.copy(errorMessage = e.message, hasPermission = false) }
+            }
+        }
+    }
+
+    private fun beginTimer() {
+        viewModelScope.launch {
+            while (isActive && _uiState.value.status == TrackingStatus.RECORDING) {
+                kotlinx.coroutines.delay(1_000L)
+                _uiState.update { state ->
+                    val totalMs = elapsedBeforePauseMs + (System.currentTimeMillis() - startTimeMs)
+                    val durSec = totalMs / 1_000L
+                    state.copy(
+                        durationSec = durSec,
+                        avgSpeedKmh = HikeMath.avgSpeedKmh(state.distanceKm, durSec),
+                    )
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun factory(): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as WildTrailApp)
+                TrackingViewModel(
+                    locationTracker = app.container.locationTracker,
+                    hikeLogRepository = app.container.hikeLogRepository,
+                    authRepository = app.container.authRepository,
+                )
+            }
+        }
+    }
+}

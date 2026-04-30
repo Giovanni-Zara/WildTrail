@@ -1,0 +1,61 @@
+package com.wildtrail.app.data.local.entity
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import com.wildtrail.app.domain.model.User
+
+/**
+ * Room representation of a user. The primary key is [firebaseUid] so that the
+ * same id we use for auth + Firestore is also the cache key — no second
+ * "local id" column to keep in sync.
+ */
+@Entity(tableName = "users")
+data class UserEntity(
+    @PrimaryKey val firebaseUid: String,
+    val username: String,
+    val age: Int?,
+    val country: String?,
+    val level: Int,
+    val xpPoints: Int,
+    val totalDistanceKm: Float,
+    val totalHikesCount: Int,
+    val profilePictureUrl: String?,
+    val bio: String?,
+    val createdAt: Long,
+    val lastActive: Long,
+    val isPublic: Boolean,
+)
+
+// --- Mapping helpers (entity <-> domain) ---------------------------------
+
+fun UserEntity.toDomain(): User = User(
+    firebaseUid = firebaseUid,
+    username = username,
+    age = age,
+    country = country,
+    level = level,
+    xpPoints = xpPoints,
+    totalDistanceKm = totalDistanceKm,
+    totalHikesCount = totalHikesCount,
+    profilePictureUrl = profilePictureUrl,
+    bio = bio,
+    createdAt = createdAt,
+    lastActive = lastActive,
+    isPublic = isPublic,
+)
+
+fun User.toEntity(): UserEntity = UserEntity(
+    firebaseUid = firebaseUid,
+    username = username,
+    age = age,
+    country = country,
+    level = level,
+    xpPoints = xpPoints,
+    totalDistanceKm = totalDistanceKm,
+    totalHikesCount = totalHikesCount,
+    profilePictureUrl = profilePictureUrl,
+    bio = bio,
+    createdAt = createdAt,
+    lastActive = lastActive,
+    isPublic = isPublic,
+)
