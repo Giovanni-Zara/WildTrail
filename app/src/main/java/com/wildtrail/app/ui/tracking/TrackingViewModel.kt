@@ -101,8 +101,24 @@ class TrackingViewModel(
         _uiState.update { it.copy(status = TrackingStatus.STOPPED) }
     }
 
-    /** Persist the recorded hike. Called from the "save" UI on the summary screen. */
-    fun saveHike(title: String, description: String?, surfaceType: SurfaceType, isPrivate: Boolean) {
+    /**
+     * Persist the recorded hike. The "characteristics" (difficulty, mud, …)
+     * are filled in by the creator at save time and live on the [HikeLog]
+     * itself; *other* users then leave [com.wildtrail.app.domain.model.TrailReview]s
+     * whose `overallRating`s are averaged into [HikeLog.averageRating].
+     */
+    fun saveHike(
+        title: String,
+        description: String?,
+        surfaceType: SurfaceType,
+        isPrivate: Boolean,
+        difficultyLevel: Int,
+        mudRisk: Int,
+        pathClarity: Int,
+        fatigueLevel: Int,
+        animalEncounterRisk: Int,
+        waterAvailability: Boolean,
+    ) {
         val state = _uiState.value
         val auth = authRepository.authState.value
         if (auth !is AuthState.SignedIn) {
@@ -131,6 +147,14 @@ class TrackingViewModel(
             elevationGainMeters = state.elevationGainM,
             routeCoordinates = state.routePoints,
             isPrivate = isPrivate,
+            difficultyLevel = difficultyLevel,
+            mudRisk = mudRisk,
+            pathClarity = pathClarity,
+            fatigueLevel = fatigueLevel,
+            animalEncounterRisk = animalEncounterRisk,
+            waterAvailability = waterAvailability,
+            averageRating = 0f,
+            reviewCount = 0,
         )
         viewModelScope.launch {
             runCatching { hikeLogRepository.saveHike(hike) }

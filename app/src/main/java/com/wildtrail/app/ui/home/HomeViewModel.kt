@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val currentUser: User? = null,
@@ -73,6 +74,10 @@ class HomeViewModel(
     )
 
     fun signOut() = authRepository.signOut()
+
+    fun refresh() {
+        viewModelScope.launch { runCatching { hikeLogRepository.refresh() } }
+    }
 
     companion object {
         fun factory(): ViewModelProvider.Factory = viewModelFactory {

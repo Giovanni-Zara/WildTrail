@@ -28,11 +28,18 @@ data class ProfileUiState(
     val user: User? = null,
     val hikes: List<HikeLog> = emptyList(),
     val earnedAchievements: List<AchievementDefinition> = emptyList(),
+    /** True when the displayed profile is the logged-in user. Drives sign-out
+     *  visibility, settings, etc. */
     val isMe: Boolean = true,
 )
 
+/**
+ * @param targetUid The UID of the user to display. `null` means "the
+ *                  currently-logged-in user" — picked from authState.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModel(
+    private val targetUid: String?,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val hikeLogRepository: HikeLogRepository,
@@ -40,13 +47,18 @@ class ProfileViewModel(
 ) : ViewModel() {
 
     init {
-        // Pull definitions once on first construction.
         viewModelScope.launch { runCatching { achievementRepository.syncDefinitions() } }
     }
 
-    val uiState: StateFlow<ProfileUiState> = authRepository.authState
-        .flatMapLatest { auth ->
-            val uid = (auth as? AuthState.SignedIn)?.user?.firebaseUid
+    /** Resolved UID flow: explicit target if provided, else current user's. */
+    private val uidFlow = if (targetUid != null) {
+        flowOf(targetUid)
+    } else {
+        authRepository.authState.map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
+    }
+
+    val uiState: StateFlow<ProfileUiState> = uidFlow
+        .flatMapLatest { uid ->
             if (uid == null) {
                 flowOf(ProfileUiState())
             } else {
@@ -54,12 +66,14 @@ class ProfileViewModel(
                     userRepository.observeUser(uid),
                     hikeLogRepository.observeMyHikes(uid),
                     achievementRepository.observeEarned(uid),
-                ) { user, hikes, achievements ->
+                    authRepository.authState,
+                ) { user, hikes, achievements, auth ->
+                    val meUid = (auth as? AuthState.SignedIn)?.user?.firebaseUid
                     ProfileUiState(
                         user = user,
                         hikes = hikes,
                         earnedAchievements = achievements,
-                        isMe = true,
+                        isMe = meUid != null && meUid == uid,
                     )
                 }
             }
@@ -72,22 +86,25 @@ class ProfileViewModel(
 
     fun signOut() = authRepository.signOut()
 
-    fun updateProfile(bio: String?, country: String?, age: Int?) {
+    fun refresh() {
+        viewModelScope.launch { runCatching { hikeLogRepository.refresh() } }
+    }
+
+    fun updateProfile(bio: String?, country: String?) {
         val current = uiState.value.user ?: return
         viewModelScope.launch {
             runCatching {
-                userRepository.updateUser(
-                    current.copy(bio = bio, country = country, age = age),
-                )
+                userRepository.updateUser(current.copy(bio = bio, country = country))
             }
         }
     }
 
     companion object {
-        fun factory(): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(targetUid: String? = null): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as WildTrailApp)
                 ProfileViewModel(
+                    targetUid = targetUid,
                     authRepository = app.container.authRepository,
                     userRepository = app.container.userRepository,
                     hikeLogRepository = app.container.hikeLogRepository,

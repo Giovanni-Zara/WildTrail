@@ -8,6 +8,7 @@ import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,20 +96,34 @@ open class AuthRepository(
         user
     }
 
-    open suspend fun signUp(email: String, password: String, username: String): Result<User> = runCatching {
+    /**
+     * Sign-up now collects the demographic profile in one go: sex / DOB /
+     * country are mandatory, bio + profile picture are optional.
+     */
+    open suspend fun signUp(
+        email: String,
+        password: String,
+        username: String,
+        sex: Sex,
+        dateOfBirth: Long,
+        country: String,
+        bio: String? = null,
+        profilePictureUrl: String? = null,
+    ): Result<User> = runCatching {
         val fbUser = authService.signUp(email, password)
         val now = System.currentTimeMillis()
         val user = User(
             firebaseUid = fbUser.uid,
             username = username,
-            age = null,
-            country = null,
+            sex = sex,
+            dateOfBirth = dateOfBirth,
+            country = country,
             level = 1,
             xpPoints = 0,
             totalDistanceKm = 0f,
             totalHikesCount = 0,
-            profilePictureUrl = null,
-            bio = null,
+            profilePictureUrl = profilePictureUrl,
+            bio = bio,
             createdAt = now,
             lastActive = now,
             isPublic = true,
@@ -132,7 +147,8 @@ open class AuthRepository(
         return User(
             firebaseUid = uid,
             username = email?.substringBefore("@") ?: "hiker",
-            age = null,
+            sex = null,
+            dateOfBirth = null,
             country = null,
             level = 1,
             xpPoints = 0,
