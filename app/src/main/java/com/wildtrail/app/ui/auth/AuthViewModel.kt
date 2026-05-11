@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.viewmodel.initializer
 import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
+import com.wildtrail.app.domain.model.Sex
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,11 @@ data class AuthUiState(
     val email: String = "",
     val password: String = "",
     val username: String = "",
+    val sex: Sex? = null,
+    val dateOfBirth: Long? = null,
+    val country: String = "",
+    val bio: String = "",
+    val profilePictureUri: String = "",
     val isSignUp: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -53,6 +59,11 @@ class AuthViewModel(
     fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value, errorMessage = null) }
     fun onPasswordChanged(value: String) = _uiState.update { it.copy(password = value, errorMessage = null) }
     fun onUsernameChanged(value: String) = _uiState.update { it.copy(username = value, errorMessage = null) }
+    fun onSexChanged(value: Sex) = _uiState.update { it.copy(sex = value, errorMessage = null) }
+    fun onDateOfBirthChanged(value: Long) = _uiState.update { it.copy(dateOfBirth = value, errorMessage = null) }
+    fun onCountryChanged(value: String) = _uiState.update { it.copy(country = value, errorMessage = null) }
+    fun onBioChanged(value: String) = _uiState.update { it.copy(bio = value) }
+    fun onProfilePictureChanged(value: String) = _uiState.update { it.copy(profilePictureUri = value) }
     fun toggleMode() = _uiState.update { it.copy(isSignUp = !it.isSignUp, errorMessage = null) }
 
     fun submit() {
@@ -61,15 +72,39 @@ class AuthViewModel(
             _uiState.update { it.copy(errorMessage = "Enter an email and at least 6 chars of password") }
             return
         }
-        if (state.isSignUp && state.username.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Username is required") }
-            return
+        if (state.isSignUp) {
+            // Validate the mandatory profile fields up front.
+            if (state.username.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Username is required") }
+                return
+            }
+            if (state.sex == null) {
+                _uiState.update { it.copy(errorMessage = "Please select a sex option") }
+                return
+            }
+            if (state.dateOfBirth == null) {
+                _uiState.update { it.copy(errorMessage = "Date of birth is required") }
+                return
+            }
+            if (state.country.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Country is required") }
+                return
+            }
         }
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
             val result = if (state.isSignUp) {
-                authRepository.signUp(state.email.trim(), state.password, state.username.trim())
+                authRepository.signUp(
+                    email = state.email.trim(),
+                    password = state.password,
+                    username = state.username.trim(),
+                    sex = state.sex!!,
+                    dateOfBirth = state.dateOfBirth!!,
+                    country = state.country.trim(),
+                    bio = state.bio.trim().takeIf { it.isNotEmpty() },
+                    profilePictureUrl = state.profilePictureUri.trim().takeIf { it.isNotEmpty() },
+                )
             } else {
                 authRepository.signIn(state.email.trim(), state.password)
             }

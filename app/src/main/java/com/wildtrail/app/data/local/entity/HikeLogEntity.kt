@@ -47,6 +47,14 @@ data class HikeLogEntity(
     val elevationGainMeters: Int,
     val routeCoordinates: List<GeoPoint>,
     val isPrivate: Boolean,
+    val difficultyLevel: Int,
+    val mudRisk: Int,
+    val pathClarity: Int,
+    val fatigueLevel: Int,
+    val animalEncounterRisk: Int,
+    val waterAvailability: Boolean,
+    val averageRating: Float,
+    val reviewCount: Int,
 )
 
 fun HikeLogEntity.toDomain(): HikeLog = HikeLog(
@@ -69,6 +77,14 @@ fun HikeLogEntity.toDomain(): HikeLog = HikeLog(
     elevationGainMeters = elevationGainMeters,
     routeCoordinates = routeCoordinates,
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating,
+    reviewCount = reviewCount,
 )
 
 fun HikeLog.toEntity(): HikeLogEntity = HikeLogEntity(
@@ -91,4 +107,12 @@ fun HikeLog.toEntity(): HikeLogEntity = HikeLogEntity(
     elevationGainMeters = elevationGainMeters,
     routeCoordinates = routeCoordinates,
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating,
+    reviewCount = reviewCount,
 )

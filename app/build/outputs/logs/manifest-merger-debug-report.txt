@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 meta-data#com.google.android.geo.API_KEY
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:44:9-46:47
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:44:9-46:47
 	android:value
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:46:13-44
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:46:13-44
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:45:13-58
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:45:13-58
 manifest
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:1-61:12
 MERGED from [com.google.maps.android:maps-compose:6.4.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\1c1015195c8e642b30e4e3c2839597a7\transformed\maps-compose-6.4.0\AndroidManifest.xml:17:1-22:12
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\c626d32d84f60659499bd56b5bb079fb\transformed\material-1.12.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\ce5588cf964a62cf67980e4417ff9f25\transformed\constraintlayout-2.0.1\AndroidManifest.xml:2:1-11:12
@@ -155,17 +155,17 @@ MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\Giovanni\.gradle\caches\8.10.
 MERGED from [com.google.firebase:protolite-well-known-types:18.0.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\7647cd7de762279c004469e0b018dca7\transformed\protolite-well-known-types-18.0.0\AndroidManifest.xml:2:1-11:12
 MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\e92aba9f156991da2f6ab4388ebb5889\transformed\core-common-2.0.3\AndroidManifest.xml:2:1-21:12
 	package
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 	android:versionName
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 	xmlns:tools
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:3:5-51
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:3:5-51
 	android:versionCode
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 	xmlns:android
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:11-69
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:2:11-69
 uses-permission#android.permission.INTERNET
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:6:5-67
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:6:5-67
 MERGED from [com.google.android.gms:play-services-maps:19.0.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\9cfee88eca9a244ca6a122fd9571d541\transformed\play-services-maps-19.0.0\AndroidManifest.xml:24:5-67
 MERGED from [com.google.android.gms:play-services-maps:19.0.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\9cfee88eca9a244ca6a122fd9571d541\transformed\play-services-maps-19.0.0\AndroidManifest.xml:24:5-67
 MERGED from [com.google.firebase:firebase-storage:21.0.1] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\7f620b5edc37c9435da540962daf10e4\transformed\firebase-storage-21.0.1\AndroidManifest.xml:24:5-67
@@ -187,9 +187,9 @@ MERGED from [com.google.firebase:firebase-installations:18.0.0] C:\Users\Giovann
 MERGED from [com.google.android.gms:play-services-measurement-sdk-api:22.1.2] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\0baf7b2ee9da793708560a89a4a6af3f\transformed\play-services-measurement-sdk-api-22.1.2\AndroidManifest.xml:23:5-67
 MERGED from [com.google.android.gms:play-services-measurement-sdk-api:22.1.2] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\0baf7b2ee9da793708560a89a4a6af3f\transformed\play-services-measurement-sdk-api-22.1.2\AndroidManifest.xml:23:5-67
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:6:22-64
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:6:22-64
 uses-permission#android.permission.ACCESS_NETWORK_STATE
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:7:5-79
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:7:5-79
 MERGED from [com.google.android.gms:play-services-maps:19.0.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\9cfee88eca9a244ca6a122fd9571d541\transformed\play-services-maps-19.0.0\AndroidManifest.xml:23:5-79
 MERGED from [com.google.android.gms:play-services-maps:19.0.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\9cfee88eca9a244ca6a122fd9571d541\transformed\play-services-maps-19.0.0\AndroidManifest.xml:23:5-79
 MERGED from [com.google.firebase:firebase-storage:21.0.1] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\7f620b5edc37c9435da540962daf10e4\transformed\firebase-storage-21.0.1\AndroidManifest.xml:23:5-79
@@ -213,56 +213,56 @@ MERGED from [com.google.android.gms:play-services-measurement-sdk-api:22.1.2] C:
 MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\d62b410d4ce6b22b2ea1999c1ee211b5\transformed\grpc-android-1.62.2\AndroidManifest.xml:7:5-79
 MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\d62b410d4ce6b22b2ea1999c1ee211b5\transformed\grpc-android-1.62.2\AndroidManifest.xml:7:5-79
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:7:22-76
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:7:22-76
 uses-permission#android.permission.ACCESS_FINE_LOCATION
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:10:5-79
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:10:5-79
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:10:22-76
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:10:22-76
 uses-permission#android.permission.ACCESS_COARSE_LOCATION
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:11:5-81
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:11:5-81
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:11:22-78
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:11:22-78
 uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:13:5-77
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:13:5-77
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:13:22-74
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:13:22-74
 uses-permission#android.permission.FOREGROUND_SERVICE_LOCATION
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:14:5-86
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:14:5-86
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:14:22-83
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:14:22-83
 uses-permission#android.permission.POST_NOTIFICATIONS
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:15:5-77
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:15:5-77
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:15:22-74
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:15:22-74
 uses-permission#android.permission.CAMERA
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:18:5-65
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:18:5-65
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:18:22-62
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:18:22-62
 uses-feature#android.hardware.camera
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:5-85
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:5-85
 	android:required
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:58-82
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:58-82
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:19-57
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:19:19-57
 uses-feature#android.hardware.location.gps
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:5-90
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:5-90
 	android:required
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:64-87
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:64-87
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:19-63
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:20:19-63
 uses-permission#android.permission.VIBRATE
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:23:5-66
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:23:5-66
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:23:22-63
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:23:22-63
 uses-feature#android.hardware.sensor.accelerometer
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:5-99
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:5-99
 	android:required
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:72-96
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:72-96
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:19-71
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:26:19-71
 application
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:30:5-59:19
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:30:5-59:19
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:30:5-59:19
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:30:5-59:19
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\c626d32d84f60659499bd56b5bb079fb\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\c626d32d84f60659499bd56b5bb079fb\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\ce5588cf964a62cf67980e4417ff9f25\transformed\constraintlayout-2.0.1\AndroidManifest.xml:9:5-20
@@ -352,55 +352,55 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Gi
 MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\e92aba9f156991da2f6ab4388ebb5889\transformed\core-common-2.0.3\AndroidManifest.xml:11:5-19:19
 MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\e92aba9f156991da2f6ab4388ebb5889\transformed\core-common-2.0.3\AndroidManifest.xml:11:5-19:19
 	android:extractNativeLibs
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\48283661d8b99bf3048720e28ee3bca6\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:38:9-35
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:38:9-35
 	android:label
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:37:9-41
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:37:9-41
 	android:fullBackupContent
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:34:9-54
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:34:9-54
 	android:roundIcon
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:36:9-54
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:36:9-54
 	tools:targetApi
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:41:9-29
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:41:9-29
 	android:icon
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:35:9-43
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:35:9-43
 	android:allowBackup
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:32:9-35
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:32:9-35
 	android:theme
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:39:9-47
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:39:9-47
 	android:dataExtractionRules
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:33:9-65
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:33:9-65
 	android:usesCleartextTraffic
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:40:9-45
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:40:9-45
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:31:9-37
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:31:9-37
 activity#com.wildtrail.app.MainActivity
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:48:9-57:20
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:48:9-57:20
 	android:label
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:51:13-45
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:51:13-45
 	android:exported
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:50:13-36
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:50:13-36
 	android:theme
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:52:13-58
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:52:13-58
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:49:13-41
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:49:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:53:13-56:29
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:53:13-56:29
 action#android.intent.action.MAIN
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:54:17-69
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:54:17-69
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:54:25-66
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:54:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:55:17-77
+ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:55:17-77
 	android:name
-		ADDED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml:55:27-74
+		ADDED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml:55:27-74
 uses-sdk
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
-INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 MERGED from [com.google.maps.android:maps-compose:6.4.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\1c1015195c8e642b30e4e3c2839597a7\transformed\maps-compose-6.4.0\AndroidManifest.xml:20:5-44
 MERGED from [com.google.maps.android:maps-compose:6.4.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\1c1015195c8e642b30e4e3c2839597a7\transformed\maps-compose-6.4.0\AndroidManifest.xml:20:5-44
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\c626d32d84f60659499bd56b5bb079fb\transformed\material-1.12.0\AndroidManifest.xml:20:5-44
@@ -690,9 +690,9 @@ MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\Giovanni\.gradl
 	tools:overrideLibrary
 		ADDED from [com.google.firebase:firebase-auth:23.1.0] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\693534a8fe73f3ef156e28b213583fa6\transformed\firebase-auth-23.1.0\AndroidManifest.xml:23:9-148
 	android:targetSdkVersion
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from C:\dev\Android-Mobile-App\app\src\main\AndroidManifest.xml
+		INJECTED from C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\AndroidManifest.xml
 activity#androidx.compose.ui.tooling.PreviewActivity
 ADDED from [androidx.compose.ui:ui-tooling-android:1.7.6] C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\6865668ec42910d6b12d528649407e4f\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
 	android:exported

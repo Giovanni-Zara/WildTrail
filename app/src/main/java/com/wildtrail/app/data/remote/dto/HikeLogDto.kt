@@ -33,6 +33,14 @@ data class HikeLogDto(
     var elevationGainMeters: Int = 0,
     var routeCoordinates: List<Map<String, Any?>> = emptyList(),
     var isPrivate: Boolean = false,
+    var difficultyLevel: Int = 3,
+    var mudRisk: Int = 3,
+    var pathClarity: Int = 3,
+    var fatigueLevel: Int = 3,
+    var animalEncounterRisk: Int = 3,
+    var waterAvailability: Boolean = false,
+    var averageRating: Double = 0.0,
+    var reviewCount: Int = 0,
 )
 
 private fun SurfaceType.code(): String = name
@@ -66,6 +74,14 @@ fun HikeLogDto.toDomain(): HikeLog = HikeLog(
         )
     },
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating.toFloat(),
+    reviewCount = reviewCount,
 )
 
 fun HikeLog.toDto(): HikeLogDto = HikeLogDto(
@@ -95,4 +111,12 @@ fun HikeLog.toDto(): HikeLogDto = HikeLogDto(
         )
     },
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating.toDouble(),
+    reviewCount = reviewCount,
 )

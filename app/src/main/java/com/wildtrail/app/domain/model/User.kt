@@ -11,7 +11,10 @@ package com.wildtrail.app.domain.model
 data class User(
     val firebaseUid: String,
     val username: String,
-    val age: Int?,
+    /** Mandatory at signup; nullable here so cached / legacy rows don't break. */
+    val sex: Sex?,
+    /** Date of birth as epoch millis. We derive `age` from it on the fly. */
+    val dateOfBirth: Long?,
     val country: String?,
     val level: Int,
     val xpPoints: Int,
@@ -23,3 +26,5 @@ data class User(
     val lastActive: Long,
     val isPublic: Boolean,
 )
+
+enum class Sex { MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY }

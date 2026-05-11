@@ -5,6 +5,7 @@ import com.wildtrail.app.domain.model.AchievementDefinition
 import com.wildtrail.app.domain.model.EmergencyContact
 import com.wildtrail.app.domain.model.FollowedTrail
 import com.wildtrail.app.domain.model.HikeComment
+import com.wildtrail.app.domain.model.Like
 import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.UserAchievement
 import com.wildtrail.app.domain.model.UserFollow
@@ -15,6 +16,7 @@ data class TrailReviewDto(
     var reviewId: String = "",
     var reviewerUid: String = "",
     var hikeId: String = "",
+    var overallRating: Int = 3,
     var fatigueLevel: Int = 0,
     var pathClarity: Int = 0,
     var difficultyLevel: Int = 0,
@@ -25,13 +27,31 @@ data class TrailReviewDto(
 )
 
 fun TrailReviewDto.toDomain() = TrailReview(
-    reviewId, reviewerUid, hikeId, fatigueLevel, pathClarity, difficultyLevel,
-    mudRisk, animalEncounterRisk, waterAvailability, createdAt,
+    reviewId = reviewId,
+    reviewerUid = reviewerUid,
+    hikeId = hikeId,
+    overallRating = overallRating,
+    fatigueLevel = fatigueLevel,
+    pathClarity = pathClarity,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    createdAt = createdAt,
 )
 
 fun TrailReview.toDto() = TrailReviewDto(
-    reviewId, reviewerUid, hikeId, fatigueLevel, pathClarity, difficultyLevel,
-    mudRisk, animalEncounterRisk, waterAvailability, createdAt,
+    reviewId = reviewId,
+    reviewerUid = reviewerUid,
+    hikeId = hikeId,
+    overallRating = overallRating,
+    fatigueLevel = fatigueLevel,
+    pathClarity = pathClarity,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    createdAt = createdAt,
 )
 
 // --- Social --------------------------------------------------------------
@@ -124,3 +144,14 @@ fun EmergencyContactDto.toDomain() = EmergencyContact(
 fun EmergencyContact.toDto() = EmergencyContactDto(
     contactId, userUid, name, phoneNumber, relationship, isPrimary, notifyOnFall,
 )
+
+// --- Likes ---------------------------------------------------------------
+
+data class LikeDto(
+    var userUid: String = "",
+    var hikeId: String = "",
+    var createdAt: Long = 0L,
+)
+
+fun LikeDto.toDomain() = Like(userUid, hikeId, createdAt)
+fun Like.toDto() = LikeDto(userUid, hikeId, createdAt)

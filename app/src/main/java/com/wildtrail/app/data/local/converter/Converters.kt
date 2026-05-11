@@ -3,6 +3,7 @@ package com.wildtrail.app.data.local.converter
 import androidx.room.TypeConverter
 import com.wildtrail.app.domain.model.AchievementCategory
 import com.wildtrail.app.domain.model.GeoPoint
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.SurfaceType
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -67,4 +68,14 @@ object Converters {
     @JvmStatic
     fun stringToAchievementCategory(value: String): AchievementCategory =
         runCatching { AchievementCategory.valueOf(value) }.getOrDefault(AchievementCategory.OTHER)
+
+    @TypeConverter
+    @JvmStatic
+    fun sexToString(value: Sex?): String? = value?.name
+
+    @TypeConverter
+    @JvmStatic
+    fun stringToSex(value: String?): Sex? = value?.let {
+        runCatching { Sex.valueOf(it) }.getOrNull()
+    }
 }

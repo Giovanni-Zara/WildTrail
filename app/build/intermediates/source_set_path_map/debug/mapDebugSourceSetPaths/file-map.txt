@@ -84,10 +84,10 @@ com.wildtrail.app-graphics-path-1.0.1-82 C:\Users\Giovanni\.gradle\caches\8.10.2
 com.wildtrail.app-navigation-common-2.8.5-83 C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\fa3627189a9ce336aed1197cf9115dee\transformed\navigation-common-2.8.5\res
 com.wildtrail.app-ui-geometry-release-84 C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\face644ff3a6f57039c437cc5c84b0cc\transformed\ui-geometry-release\res
 com.wildtrail.app-credentials-1.2.0-rc01-85 C:\Users\Giovanni\.gradle\caches\8.10.2\transforms\ff4d144df61d669477638504d800f349\transformed\credentials-1.2.0-rc01\res
-com.wildtrail.app-res-86 C:\dev\Android-Mobile-App\app\build\generated\res\processDebugGoogleServices
-com.wildtrail.app-resValues-87 C:\dev\Android-Mobile-App\app\build\generated\res\resValues\debug
-com.wildtrail.app-packageDebugResources-88 C:\dev\Android-Mobile-App\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.wildtrail.app-packageDebugResources-89 C:\dev\Android-Mobile-App\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.wildtrail.app-debug-90 C:\dev\Android-Mobile-App\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.wildtrail.app-debug-91 C:\dev\Android-Mobile-App\app\src\debug\res
-com.wildtrail.app-main-92 C:\dev\Android-Mobile-App\app\src\main\res
+com.wildtrail.app-res-86 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\build\generated\res\processDebugGoogleServices
+com.wildtrail.app-resValues-87 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\build\generated\res\resValues\debug
+com.wildtrail.app-packageDebugResources-88 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.wildtrail.app-packageDebugResources-89 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.wildtrail.app-debug-90 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.wildtrail.app-debug-91 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\debug\res
+com.wildtrail.app-main-92 C:\Users\Giovanni\Downloads\Android-Mobile-App\app\src\main\res

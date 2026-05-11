@@ -2,6 +2,7 @@ package com.wildtrail.app.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 
 /**
@@ -13,7 +14,8 @@ import com.wildtrail.app.domain.model.User
 data class UserEntity(
     @PrimaryKey val firebaseUid: String,
     val username: String,
-    val age: Int?,
+    val sex: Sex?,
+    val dateOfBirth: Long?,
     val country: String?,
     val level: Int,
     val xpPoints: Int,
@@ -31,7 +33,8 @@ data class UserEntity(
 fun UserEntity.toDomain(): User = User(
     firebaseUid = firebaseUid,
     username = username,
-    age = age,
+    sex = sex,
+    dateOfBirth = dateOfBirth,
     country = country,
     level = level,
     xpPoints = xpPoints,
@@ -47,7 +50,8 @@ fun UserEntity.toDomain(): User = User(
 fun User.toEntity(): UserEntity = UserEntity(
     firebaseUid = firebaseUid,
     username = username,
-    age = age,
+    sex = sex,
+    dateOfBirth = dateOfBirth,
     country = country,
     level = level,
     xpPoints = xpPoints,

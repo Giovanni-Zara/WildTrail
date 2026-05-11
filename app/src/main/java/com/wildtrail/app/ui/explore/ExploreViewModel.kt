@@ -53,6 +53,10 @@ class ExploreViewModel(
         }
     }
 
+    fun refresh() {
+        viewModelScope.launch { runCatching { hikeLogRepository.refresh() } }
+    }
+
     companion object {
         fun factory(): ViewModelProvider.Factory = viewModelFactory {
             initializer {

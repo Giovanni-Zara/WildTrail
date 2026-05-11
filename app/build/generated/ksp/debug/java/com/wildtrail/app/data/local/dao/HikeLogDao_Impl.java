@@ -48,7 +48,7 @@ public final class HikeLogDao_Impl implements HikeLogDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `hike_logs` (`hikeId`,`creatorFirebaseUid`,`workoutId`,`title`,`description`,`avgSpeedKmh`,`stepCount`,`caloriesBurned`,`coverPhotoUrl`,`xpEarned`,`likesCount`,`surfaceType`,`lengthKm`,`durationSeconds`,`startedAt`,`endedAt`,`elevationGainMeters`,`routeCoordinates`,`isPrivate`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `hike_logs` (`hikeId`,`creatorFirebaseUid`,`workoutId`,`title`,`description`,`avgSpeedKmh`,`stepCount`,`caloriesBurned`,`coverPhotoUrl`,`xpEarned`,`likesCount`,`surfaceType`,`lengthKm`,`durationSeconds`,`startedAt`,`endedAt`,`elevationGainMeters`,`routeCoordinates`,`isPrivate`,`difficultyLevel`,`mudRisk`,`pathClarity`,`fatigueLevel`,`animalEncounterRisk`,`waterAvailability`,`averageRating`,`reviewCount`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -88,6 +88,15 @@ public final class HikeLogDao_Impl implements HikeLogDao {
         statement.bindString(18, _tmp_1);
         final int _tmp_2 = entity.isPrivate() ? 1 : 0;
         statement.bindLong(19, _tmp_2);
+        statement.bindLong(20, entity.getDifficultyLevel());
+        statement.bindLong(21, entity.getMudRisk());
+        statement.bindLong(22, entity.getPathClarity());
+        statement.bindLong(23, entity.getFatigueLevel());
+        statement.bindLong(24, entity.getAnimalEncounterRisk());
+        final int _tmp_3 = entity.getWaterAvailability() ? 1 : 0;
+        statement.bindLong(25, _tmp_3);
+        statement.bindDouble(26, entity.getAverageRating());
+        statement.bindLong(27, entity.getReviewCount());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -225,6 +234,14 @@ public final class HikeLogDao_Impl implements HikeLogDao {
           final int _cursorIndexOfElevationGainMeters = CursorUtil.getColumnIndexOrThrow(_cursor, "elevationGainMeters");
           final int _cursorIndexOfRouteCoordinates = CursorUtil.getColumnIndexOrThrow(_cursor, "routeCoordinates");
           final int _cursorIndexOfIsPrivate = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrivate");
+          final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
+          final int _cursorIndexOfMudRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "mudRisk");
+          final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
+          final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
+          final int _cursorIndexOfAnimalEncounterRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "animalEncounterRisk");
+          final int _cursorIndexOfWaterAvailability = CursorUtil.getColumnIndexOrThrow(_cursor, "waterAvailability");
+          final int _cursorIndexOfAverageRating = CursorUtil.getColumnIndexOrThrow(_cursor, "averageRating");
+          final int _cursorIndexOfReviewCount = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewCount");
           final HikeLogEntity _result;
           if (_cursor.moveToFirst()) {
             final String _tmpHikeId;
@@ -283,7 +300,25 @@ public final class HikeLogDao_Impl implements HikeLogDao {
             final int _tmp_2;
             _tmp_2 = _cursor.getInt(_cursorIndexOfIsPrivate);
             _tmpIsPrivate = _tmp_2 != 0;
-            _result = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate);
+            final int _tmpDifficultyLevel;
+            _tmpDifficultyLevel = _cursor.getInt(_cursorIndexOfDifficultyLevel);
+            final int _tmpMudRisk;
+            _tmpMudRisk = _cursor.getInt(_cursorIndexOfMudRisk);
+            final int _tmpPathClarity;
+            _tmpPathClarity = _cursor.getInt(_cursorIndexOfPathClarity);
+            final int _tmpFatigueLevel;
+            _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
+            final int _tmpAnimalEncounterRisk;
+            _tmpAnimalEncounterRisk = _cursor.getInt(_cursorIndexOfAnimalEncounterRisk);
+            final boolean _tmpWaterAvailability;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfWaterAvailability);
+            _tmpWaterAvailability = _tmp_3 != 0;
+            final float _tmpAverageRating;
+            _tmpAverageRating = _cursor.getFloat(_cursorIndexOfAverageRating);
+            final int _tmpReviewCount;
+            _tmpReviewCount = _cursor.getInt(_cursorIndexOfReviewCount);
+            _result = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate,_tmpDifficultyLevel,_tmpMudRisk,_tmpPathClarity,_tmpFatigueLevel,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpAverageRating,_tmpReviewCount);
           } else {
             _result = null;
           }
@@ -327,6 +362,14 @@ public final class HikeLogDao_Impl implements HikeLogDao {
           final int _cursorIndexOfElevationGainMeters = CursorUtil.getColumnIndexOrThrow(_cursor, "elevationGainMeters");
           final int _cursorIndexOfRouteCoordinates = CursorUtil.getColumnIndexOrThrow(_cursor, "routeCoordinates");
           final int _cursorIndexOfIsPrivate = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrivate");
+          final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
+          final int _cursorIndexOfMudRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "mudRisk");
+          final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
+          final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
+          final int _cursorIndexOfAnimalEncounterRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "animalEncounterRisk");
+          final int _cursorIndexOfWaterAvailability = CursorUtil.getColumnIndexOrThrow(_cursor, "waterAvailability");
+          final int _cursorIndexOfAverageRating = CursorUtil.getColumnIndexOrThrow(_cursor, "averageRating");
+          final int _cursorIndexOfReviewCount = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewCount");
           final HikeLogEntity _result;
           if (_cursor.moveToFirst()) {
             final String _tmpHikeId;
@@ -385,7 +428,25 @@ public final class HikeLogDao_Impl implements HikeLogDao {
             final int _tmp_2;
             _tmp_2 = _cursor.getInt(_cursorIndexOfIsPrivate);
             _tmpIsPrivate = _tmp_2 != 0;
-            _result = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate);
+            final int _tmpDifficultyLevel;
+            _tmpDifficultyLevel = _cursor.getInt(_cursorIndexOfDifficultyLevel);
+            final int _tmpMudRisk;
+            _tmpMudRisk = _cursor.getInt(_cursorIndexOfMudRisk);
+            final int _tmpPathClarity;
+            _tmpPathClarity = _cursor.getInt(_cursorIndexOfPathClarity);
+            final int _tmpFatigueLevel;
+            _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
+            final int _tmpAnimalEncounterRisk;
+            _tmpAnimalEncounterRisk = _cursor.getInt(_cursorIndexOfAnimalEncounterRisk);
+            final boolean _tmpWaterAvailability;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfWaterAvailability);
+            _tmpWaterAvailability = _tmp_3 != 0;
+            final float _tmpAverageRating;
+            _tmpAverageRating = _cursor.getFloat(_cursorIndexOfAverageRating);
+            final int _tmpReviewCount;
+            _tmpReviewCount = _cursor.getInt(_cursorIndexOfReviewCount);
+            _result = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate,_tmpDifficultyLevel,_tmpMudRisk,_tmpPathClarity,_tmpFatigueLevel,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpAverageRating,_tmpReviewCount);
           } else {
             _result = null;
           }
@@ -433,6 +494,14 @@ public final class HikeLogDao_Impl implements HikeLogDao {
           final int _cursorIndexOfElevationGainMeters = CursorUtil.getColumnIndexOrThrow(_cursor, "elevationGainMeters");
           final int _cursorIndexOfRouteCoordinates = CursorUtil.getColumnIndexOrThrow(_cursor, "routeCoordinates");
           final int _cursorIndexOfIsPrivate = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrivate");
+          final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
+          final int _cursorIndexOfMudRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "mudRisk");
+          final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
+          final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
+          final int _cursorIndexOfAnimalEncounterRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "animalEncounterRisk");
+          final int _cursorIndexOfWaterAvailability = CursorUtil.getColumnIndexOrThrow(_cursor, "waterAvailability");
+          final int _cursorIndexOfAverageRating = CursorUtil.getColumnIndexOrThrow(_cursor, "averageRating");
+          final int _cursorIndexOfReviewCount = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewCount");
           final List<HikeLogEntity> _result = new ArrayList<HikeLogEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final HikeLogEntity _item;
@@ -492,7 +561,25 @@ public final class HikeLogDao_Impl implements HikeLogDao {
             final int _tmp_2;
             _tmp_2 = _cursor.getInt(_cursorIndexOfIsPrivate);
             _tmpIsPrivate = _tmp_2 != 0;
-            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate);
+            final int _tmpDifficultyLevel;
+            _tmpDifficultyLevel = _cursor.getInt(_cursorIndexOfDifficultyLevel);
+            final int _tmpMudRisk;
+            _tmpMudRisk = _cursor.getInt(_cursorIndexOfMudRisk);
+            final int _tmpPathClarity;
+            _tmpPathClarity = _cursor.getInt(_cursorIndexOfPathClarity);
+            final int _tmpFatigueLevel;
+            _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
+            final int _tmpAnimalEncounterRisk;
+            _tmpAnimalEncounterRisk = _cursor.getInt(_cursorIndexOfAnimalEncounterRisk);
+            final boolean _tmpWaterAvailability;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfWaterAvailability);
+            _tmpWaterAvailability = _tmp_3 != 0;
+            final float _tmpAverageRating;
+            _tmpAverageRating = _cursor.getFloat(_cursorIndexOfAverageRating);
+            final int _tmpReviewCount;
+            _tmpReviewCount = _cursor.getInt(_cursorIndexOfReviewCount);
+            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate,_tmpDifficultyLevel,_tmpMudRisk,_tmpPathClarity,_tmpFatigueLevel,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpAverageRating,_tmpReviewCount);
             _result.add(_item);
           }
           return _result;
@@ -539,6 +626,14 @@ public final class HikeLogDao_Impl implements HikeLogDao {
           final int _cursorIndexOfElevationGainMeters = CursorUtil.getColumnIndexOrThrow(_cursor, "elevationGainMeters");
           final int _cursorIndexOfRouteCoordinates = CursorUtil.getColumnIndexOrThrow(_cursor, "routeCoordinates");
           final int _cursorIndexOfIsPrivate = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrivate");
+          final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
+          final int _cursorIndexOfMudRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "mudRisk");
+          final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
+          final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
+          final int _cursorIndexOfAnimalEncounterRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "animalEncounterRisk");
+          final int _cursorIndexOfWaterAvailability = CursorUtil.getColumnIndexOrThrow(_cursor, "waterAvailability");
+          final int _cursorIndexOfAverageRating = CursorUtil.getColumnIndexOrThrow(_cursor, "averageRating");
+          final int _cursorIndexOfReviewCount = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewCount");
           final List<HikeLogEntity> _result = new ArrayList<HikeLogEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final HikeLogEntity _item;
@@ -598,7 +693,25 @@ public final class HikeLogDao_Impl implements HikeLogDao {
             final int _tmp_2;
             _tmp_2 = _cursor.getInt(_cursorIndexOfIsPrivate);
             _tmpIsPrivate = _tmp_2 != 0;
-            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate);
+            final int _tmpDifficultyLevel;
+            _tmpDifficultyLevel = _cursor.getInt(_cursorIndexOfDifficultyLevel);
+            final int _tmpMudRisk;
+            _tmpMudRisk = _cursor.getInt(_cursorIndexOfMudRisk);
+            final int _tmpPathClarity;
+            _tmpPathClarity = _cursor.getInt(_cursorIndexOfPathClarity);
+            final int _tmpFatigueLevel;
+            _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
+            final int _tmpAnimalEncounterRisk;
+            _tmpAnimalEncounterRisk = _cursor.getInt(_cursorIndexOfAnimalEncounterRisk);
+            final boolean _tmpWaterAvailability;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfWaterAvailability);
+            _tmpWaterAvailability = _tmp_3 != 0;
+            final float _tmpAverageRating;
+            _tmpAverageRating = _cursor.getFloat(_cursorIndexOfAverageRating);
+            final int _tmpReviewCount;
+            _tmpReviewCount = _cursor.getInt(_cursorIndexOfReviewCount);
+            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate,_tmpDifficultyLevel,_tmpMudRisk,_tmpPathClarity,_tmpFatigueLevel,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpAverageRating,_tmpReviewCount);
             _result.add(_item);
           }
           return _result;
@@ -655,6 +768,14 @@ public final class HikeLogDao_Impl implements HikeLogDao {
           final int _cursorIndexOfElevationGainMeters = CursorUtil.getColumnIndexOrThrow(_cursor, "elevationGainMeters");
           final int _cursorIndexOfRouteCoordinates = CursorUtil.getColumnIndexOrThrow(_cursor, "routeCoordinates");
           final int _cursorIndexOfIsPrivate = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrivate");
+          final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
+          final int _cursorIndexOfMudRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "mudRisk");
+          final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
+          final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
+          final int _cursorIndexOfAnimalEncounterRisk = CursorUtil.getColumnIndexOrThrow(_cursor, "animalEncounterRisk");
+          final int _cursorIndexOfWaterAvailability = CursorUtil.getColumnIndexOrThrow(_cursor, "waterAvailability");
+          final int _cursorIndexOfAverageRating = CursorUtil.getColumnIndexOrThrow(_cursor, "averageRating");
+          final int _cursorIndexOfReviewCount = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewCount");
           final List<HikeLogEntity> _result = new ArrayList<HikeLogEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final HikeLogEntity _item;
@@ -714,7 +835,25 @@ public final class HikeLogDao_Impl implements HikeLogDao {
             final int _tmp_2;
             _tmp_2 = _cursor.getInt(_cursorIndexOfIsPrivate);
             _tmpIsPrivate = _tmp_2 != 0;
-            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate);
+            final int _tmpDifficultyLevel;
+            _tmpDifficultyLevel = _cursor.getInt(_cursorIndexOfDifficultyLevel);
+            final int _tmpMudRisk;
+            _tmpMudRisk = _cursor.getInt(_cursorIndexOfMudRisk);
+            final int _tmpPathClarity;
+            _tmpPathClarity = _cursor.getInt(_cursorIndexOfPathClarity);
+            final int _tmpFatigueLevel;
+            _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
+            final int _tmpAnimalEncounterRisk;
+            _tmpAnimalEncounterRisk = _cursor.getInt(_cursorIndexOfAnimalEncounterRisk);
+            final boolean _tmpWaterAvailability;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfWaterAvailability);
+            _tmpWaterAvailability = _tmp_3 != 0;
+            final float _tmpAverageRating;
+            _tmpAverageRating = _cursor.getFloat(_cursorIndexOfAverageRating);
+            final int _tmpReviewCount;
+            _tmpReviewCount = _cursor.getInt(_cursorIndexOfReviewCount);
+            _item = new HikeLogEntity(_tmpHikeId,_tmpCreatorFirebaseUid,_tmpWorkoutId,_tmpTitle,_tmpDescription,_tmpAvgSpeedKmh,_tmpStepCount,_tmpCaloriesBurned,_tmpCoverPhotoUrl,_tmpXpEarned,_tmpLikesCount,_tmpSurfaceType,_tmpLengthKm,_tmpDurationSeconds,_tmpStartedAt,_tmpEndedAt,_tmpElevationGainMeters,_tmpRouteCoordinates,_tmpIsPrivate,_tmpDifficultyLevel,_tmpMudRisk,_tmpPathClarity,_tmpFatigueLevel,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpAverageRating,_tmpReviewCount);
             _result.add(_item);
           }
           return _result;

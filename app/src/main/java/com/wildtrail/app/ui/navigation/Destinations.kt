@@ -38,6 +38,14 @@ sealed class Destination(val route: String) {
         fun create(hikeId: String) = "hike_detail/$hikeId"
         const val ARG_HIKE_ID = "hikeId"
     }
+
+    /** Public profile of any user. Tapping a name in the comments / reviews
+     *  / creator-block routes here. Distinct from the bottom-bar [Profile]
+     *  which always shows *me*. */
+    data object UserProfile : Destination("profile/{uid}") {
+        fun create(uid: String) = "profile/$uid"
+        const val ARG_UID = "uid"
+    }
 }
 
 /**

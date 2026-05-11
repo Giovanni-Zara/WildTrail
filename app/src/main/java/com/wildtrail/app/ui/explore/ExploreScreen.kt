@@ -18,8 +18,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +40,7 @@ fun ExploreRoute(
         state = state,
         onQueryChange = viewModel::onQueryChanged,
         onHikeClick = onHikeClick,
+        onRefresh = viewModel::refresh,
     )
 }
 
@@ -45,47 +50,61 @@ fun ExploreContent(
     state: ExploreUiState,
     onQueryChange: (String) -> Unit,
     onHikeClick: (String) -> Unit,
+    onRefresh: () -> Unit,
 ) {
+    var refreshing by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("Explore") }) },
     ) { padding: PaddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                refreshing = true
+                onRefresh()
+                refreshing = false
+            },
+            modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            item {
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = onQueryChange,
-                    placeholder = { Text("Search hikes…") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            val list = if (state.query.isBlank()) state.featured else state.results
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (state.query.isBlank()) "Featured this week" else "Results",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
-            if (list.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 item {
-                    Text(
-                        if (state.query.isBlank()) "No featured hikes yet — be the first!"
-                        else "No matches for \"${state.query}\"",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = onQueryChange,
+                        placeholder = { Text("Search hikes…") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            } else {
-                items(list, key = { it.hikeId }) { hike ->
-                    HikeCard(hike = hike, onClick = { onHikeClick(hike.hikeId) })
+                val list = if (state.query.isBlank()) state.featured else state.results
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (state.query.isBlank()) "Featured this week" else "Results",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
                 }
+                if (list.isEmpty()) {
+                    item {
+                        Text(
+                            if (state.query.isBlank()) "No featured hikes yet — be the first!"
+                            else "No matches for \"${state.query}\"",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    items(list, key = { it.hikeId }) { hike ->
+                        HikeCard(hike = hike, onClick = { onHikeClick(hike.hikeId) })
+                    }
+                }
+                item { Spacer(Modifier.height(24.dp)) }
             }
         }
     }
