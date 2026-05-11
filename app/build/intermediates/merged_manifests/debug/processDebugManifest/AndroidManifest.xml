@@ -78,7 +78,7 @@
         <!-- Google Maps API key. Replace MAPS_API_KEY in local.properties (see README) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="" />
+            android:value="AIzaSyD3sGT4YKdnvFQY9aMDL0EMgND54S3HaQk" />
 
         <activity
             android:name="com.wildtrail.app.MainActivity"

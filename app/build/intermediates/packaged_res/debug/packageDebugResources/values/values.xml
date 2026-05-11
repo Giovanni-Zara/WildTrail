@@ -20,6 +20,7 @@
     <string name="auth_tagline">Track. Discover. Share.</string>
     <string name="auth_username">Username</string>
     <string name="auth_welcome">Welcome to WildTrail</string>
+    <string name="default_web_client_id" translatable="false">460981604806-pvb4moio7q55ir3du5eo0pmpe4qdvkq2.apps.googleusercontent.com</string>
     <string name="error_generic">Something went wrong. Try again.</string>
     <string name="gcm_defaultSenderId" translatable="false">460981604806</string>
     <string name="google_api_key" translatable="false">AIzaSyBpLWTp1paG0rvxnqDAMIxYQO4LlaraFQs</string>
