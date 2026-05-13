@@ -83,6 +83,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
         hikeLogDao = database.hikeLogDao(),
         likeDao = database.likeDao(),
         reviewDao = database.trailReviewDao(),
+        userDao = database.userDao(),
         firestore = firestore,
         externalScope = appScope,
     )

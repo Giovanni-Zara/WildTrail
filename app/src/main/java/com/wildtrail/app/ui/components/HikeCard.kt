@@ -58,7 +58,16 @@ fun HikeCard(
     isLiked: Boolean = false,
     onLikeClick: (() -> Unit)? = null,
     onCreatorClick: ((String) -> Unit)? = null,
+    /** Uid of the currently signed-in user. If it matches the creator, the
+     *  card shows "You" instead of the cached creator name. */
+    currentUserUid: String? = null,
 ) {
+    val isOwnHike = currentUserUid != null && currentUserUid == hike.creatorFirebaseUid
+    val displayName = when {
+        isOwnHike -> "You"
+        hike.creatorUsername.isNotBlank() -> hike.creatorUsername
+        else -> "Hiker" // Friendlier than "user" while a backfill is pending.
+    }
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -96,7 +105,7 @@ fun HikeCard(
                     }
                 }
                 Text(
-                    hike.creatorUsername.ifBlank { "user" },
+                    displayName,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 8.dp).weight(1f),

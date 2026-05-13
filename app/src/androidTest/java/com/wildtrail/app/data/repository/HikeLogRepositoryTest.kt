@@ -49,6 +49,7 @@ class HikeLogRepositoryTest {
             hikeLogDao = db.hikeLogDao(),
             likeDao = db.likeDao(),
             reviewDao = db.trailReviewDao(),
+            userDao = db.userDao(),
             firestore = fakeFirestore,
             externalScope = scope,
         )

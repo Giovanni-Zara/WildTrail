@@ -22,6 +22,11 @@ interface LikeDao {
     @Query("SELECT COUNT(*) FROM likes WHERE hikeId = :hikeId")
     fun observeLikeCount(hikeId: String): Flow<Int>
 
+    /** Non-flow variant used by [HikeLogRepository] to denormalise the
+     *  count back onto the hike row after each toggle. */
+    @Query("SELECT COUNT(*) FROM likes WHERE hikeId = :hikeId")
+    suspend fun countLikes(hikeId: String): Int
+
     /** Used by feed screens to know which cards should show a filled heart. */
     @Query("SELECT hikeId FROM likes WHERE userUid = :uid")
     fun observeMyLikedHikeIds(uid: String): Flow<List<String>>
