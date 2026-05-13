@@ -15,10 +15,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,6 +36,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,9 +55,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -244,13 +244,13 @@ fun LoginContent(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                androidx.compose.material3.HorizontalDivider(modifier = Modifier.weight(1f))
+                HorizontalDivider(modifier = Modifier.weight(1f))
                 Text(
                     "  or  ",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                androidx.compose.material3.HorizontalDivider(modifier = Modifier.weight(1f))
+                HorizontalDivider(modifier = Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
 
@@ -318,12 +318,6 @@ private fun ProfilePicturePicker(
     }
 }
 
-/**
- * Sex chips use [FlowRow] + short labels so the four options fit on every
- * screen size without text becoming vertical. Each chip is `Modifier
- * .weight(1f, fill = false)` so they share width on wide screens but
- * gracefully wrap on narrow ones.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SexSelector(
@@ -391,11 +385,10 @@ private fun DateOfBirthPicker(
         val maxDob = remember { dobMillisYearsAgo(13) }
         val state = rememberDatePickerState(
             initialSelectedDateMillis = millis ?: dobMillisYearsAgo(25),
-            // SelectableDates is the modern API; we accept dates between
-            // (today − 120 years) and (today − 13 years), inclusive.
             selectableDates = object : androidx.compose.material3.SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean =
                     utcTimeMillis in minDob..maxDob
+
                 override fun isSelectableYear(year: Int): Boolean {
                     val nowYear = Calendar.getInstance().get(Calendar.YEAR)
                     return year in (nowYear - 120)..(nowYear - 13)
@@ -408,18 +401,10 @@ private fun DateOfBirthPicker(
                 Button(onClick = {
                     val chosen = state.selectedDateMillis
                     when {
-                        chosen == null -> {
-                            inlineError = "Pick a date"
-                        }
-                        chosen > now -> {
-                            inlineError = "Date of birth cannot be in the future"
-                        }
-                        chosen > maxDob -> {
-                            inlineError = "You must be at least 13 years old"
-                        }
-                        chosen < minDob -> {
-                            inlineError = "Please pick a realistic date"
-                        }
+                        chosen == null -> inlineError = "Pick a date"
+                        chosen > now -> inlineError = "Date of birth cannot be in the future"
+                        chosen > maxDob -> inlineError = "You must be at least 13 years old"
+                        chosen < minDob -> inlineError = "Please pick a realistic date"
                         else -> {
                             inlineError = null
                             onChange(chosen)
@@ -469,13 +454,9 @@ private fun CountryDropdown(value: String, onChange: (String) -> Unit) {
                 .menuAnchor(),
         )
         if (filtered.isNotEmpty()) {
-<<<<<<< HEAD
-            // `DropdownMenu` in Material 3 uses an internally-scrollable
-            // Column whose max height tops out near the bottom of the
-            // screen. Showing **all** matching countries lets the user
-            // scroll instead of being silently truncated at 8 entries.
-=======
->>>>>>> ab3efed12fedf1785765565bc96a6cc6f56b1554
+            // DropdownMenu in Material 3 has an internally-scrollable
+            // Column. Showing every match lets the user scroll instead
+            // of being silently truncated.
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
