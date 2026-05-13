@@ -185,6 +185,7 @@ private fun HikeDetailBody(
                 CreatorBlock(
                     hike = hike,
                     creator = state.creator,
+                    isMyHike = state.isMyHike,
                     onClick = { onUserClick(hike.creatorFirebaseUid) },
                 )
             }
@@ -220,12 +221,14 @@ private fun HikeDetailBody(
                 }
                 state.currentUserUid == null -> Unit
                 state.myReviewExists -> item {
+                    // The user has already submitted a review for this hike;
+                    // their row already appears in the reviews list above, so
+                    // we just confirm and *do not* re-show the form.
                     Text(
-                        "You've already reviewed this hike. Submitting again will replace it.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        "✓ You've already reviewed this hike — your review is shown above.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
                     )
-                    ReviewForm(onSubmit = onSubmitReview)
                 }
                 else -> item { ReviewForm(onSubmit = onSubmitReview) }
             }
@@ -268,7 +271,23 @@ private fun LikeButton(liked: Boolean, count: Int, onClick: () -> Unit) {
  * sync. If we DO have the full doc, we enrich with the level line.
  */
 @Composable
-private fun CreatorBlock(hike: HikeLog, creator: User?, onClick: () -> Unit) {
+private fun CreatorBlock(
+    hike: HikeLog,
+    creator: User?,
+    isMyHike: Boolean,
+    onClick: () -> Unit,
+) {
+    // Resolution order:
+    //   1. Current user → "You"
+    //   2. denormalised creatorUsername on the hike (filled at save time)
+    //   3. observed creator user document (set by HikeDetailViewModel)
+    //   4. a friendly placeholder
+    val displayName = when {
+        isMyHike -> "You"
+        hike.creatorUsername.isNotBlank() -> hike.creatorUsername
+        creator != null && creator.username.isNotBlank() -> creator.username
+        else -> "Hiker"
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,7 +303,7 @@ private fun CreatorBlock(hike: HikeLog, creator: User?, onClick: () -> Unit) {
             )
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(
-                    "Posted by ${hike.creatorUsername.ifBlank { "user" }}",
+                    "Posted by $displayName",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -294,7 +313,7 @@ private fun CreatorBlock(hike: HikeLog, creator: User?, onClick: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
+                } else if (!isMyHike) {
                     Text(
                         "Tap to view profile",
                         style = MaterialTheme.typography.bodySmall,

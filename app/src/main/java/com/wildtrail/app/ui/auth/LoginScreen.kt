@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,9 +32,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -468,11 +469,19 @@ private fun CountryDropdown(value: String, onChange: (String) -> Unit) {
                 .menuAnchor(),
         )
         if (filtered.isNotEmpty()) {
-            ExposedDropdownMenu(
+            // `DropdownMenu` in Material 3 uses an internally-scrollable
+            // Column whose max height tops out near the bottom of the
+            // screen. Showing **all** matching countries lets the user
+            // scroll instead of being silently truncated at 8 entries.
+            DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
+                scrollState = rememberScrollState(),
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .heightIn(max = 320.dp),
             ) {
-                filtered.take(8).forEach { country ->
+                filtered.forEach { country ->
                     DropdownMenuItem(
                         text = { Text(country) },
                         onClick = {
@@ -480,13 +489,6 @@ private fun CountryDropdown(value: String, onChange: (String) -> Unit) {
                             onChange(country)
                             expanded = false
                         },
-                    )
-                }
-                if (filtered.size > 8) {
-                    DropdownMenuItem(
-                        text = { Text("…and ${filtered.size - 8} more — keep typing to narrow it down") },
-                        onClick = { expanded = false },
-                        enabled = false,
                     )
                 }
             }

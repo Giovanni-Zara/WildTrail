@@ -124,6 +124,7 @@ fun HomeContent(
                             onClick = { onHikeClick(hike.hikeId) },
                             onLikeClick = { onToggleLike(hike) },
                             onCreatorClick = onUserClick,
+                            currentUserUid = state.currentUser?.firebaseUid,
                         )
                     }
                 }
@@ -140,6 +141,7 @@ fun HomeContent(
                         onClick = { onHikeClick(hike.hikeId) },
                         onLikeClick = { onToggleLike(hike) },
                         onCreatorClick = onUserClick,
+                        currentUserUid = state.currentUser?.firebaseUid,
                     )
                 }
                 item { Spacer(Modifier.height(24.dp)) }

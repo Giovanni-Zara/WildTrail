@@ -117,6 +117,7 @@ fun ExploreContent(
                             onClick = { onHikeClick(hike.hikeId) },
                             onLikeClick = { onToggleLike(hike) },
                             onCreatorClick = onUserClick,
+                            currentUserUid = state.currentUserUid,
                         )
                     }
                 }

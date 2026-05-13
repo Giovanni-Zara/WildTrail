@@ -9,6 +9,7 @@ import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
 import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,6 +34,7 @@ data class HomeUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
     private val hikeLogRepository: HikeLogRepository,
 ) : ViewModel() {
 
@@ -41,6 +43,14 @@ class HomeViewModel(
 
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
+
+    /** Observed-from-Room user. Crucially this re-emits whenever the user
+     *  row changes — e.g. after [com.wildtrail.app.data.repository.UserRepository.incrementHikeStats]
+     *  bumps the totals when a hike is saved. */
+    private val currentUser: Flow<User?> = currentUidFlow
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(null) else userRepository.observeUser(uid)
+        }
 
     private val myHikes: Flow<List<HikeLog>> = currentUidFlow
         .flatMapLatest { uid ->
@@ -53,13 +63,13 @@ class HomeViewModel(
         }
 
     val uiState: StateFlow<HomeUiState> = combine(
-        authRepository.authState,
+        currentUser,
         publicFeed,
         myHikes,
         likedHikeIds,
-    ) { auth, publicHikes, mine, liked ->
+    ) { user, publicHikes, mine, liked ->
         HomeUiState(
-            currentUser = (auth as? AuthState.SignedIn)?.user,
+            currentUser = user,
             recentHikes = mine,
             publicFeed = publicHikes,
             likedHikeIds = liked,
@@ -91,6 +101,7 @@ class HomeViewModel(
                 val app = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as WildTrailApp)
                 HomeViewModel(
                     authRepository = app.container.authRepository,
+                    userRepository = app.container.userRepository,
                     hikeLogRepository = app.container.hikeLogRepository,
                 )
             }
