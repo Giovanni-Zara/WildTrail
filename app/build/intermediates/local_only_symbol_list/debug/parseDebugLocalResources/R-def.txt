@@ -24,6 +24,7 @@ string auth_signup
 string auth_tagline
 string auth_username
 string auth_welcome
+string default_web_client_id
 string error_generic
 string gcm_defaultSenderId
 string google_api_key

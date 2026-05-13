@@ -13,10 +13,12 @@ import androidx.room.SharedSQLiteStatement;
 import androidx.room.util.CursorUtil;
 import androidx.room.util.DBUtil;
 import androidx.sqlite.db.SupportSQLiteStatement;
+import com.wildtrail.app.data.local.converter.Converters;
 import com.wildtrail.app.data.local.entity.UserEntity;
+import com.wildtrail.app.domain.model.Sex;
 import java.lang.Class;
 import java.lang.Exception;
-import java.lang.Integer;
+import java.lang.Long;
 import java.lang.Object;
 import java.lang.Override;
 import java.lang.String;
@@ -49,7 +51,7 @@ public final class UserDao_Impl implements UserDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `users` (`firebaseUid`,`username`,`age`,`country`,`level`,`xpPoints`,`totalDistanceKm`,`totalHikesCount`,`profilePictureUrl`,`bio`,`createdAt`,`lastActive`,`isPublic`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `users` (`firebaseUid`,`username`,`sex`,`dateOfBirth`,`country`,`level`,`xpPoints`,`totalDistanceKm`,`totalHikesCount`,`profilePictureUrl`,`bio`,`createdAt`,`lastActive`,`isPublic`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -57,41 +59,47 @@ public final class UserDao_Impl implements UserDao {
           @NonNull final UserEntity entity) {
         statement.bindString(1, entity.getFirebaseUid());
         statement.bindString(2, entity.getUsername());
-        if (entity.getAge() == null) {
+        final String _tmp = Converters.INSTANCE.sexToString(entity.getSex());
+        if (_tmp == null) {
           statement.bindNull(3);
         } else {
-          statement.bindLong(3, entity.getAge());
+          statement.bindString(3, _tmp);
         }
-        if (entity.getCountry() == null) {
+        if (entity.getDateOfBirth() == null) {
           statement.bindNull(4);
         } else {
-          statement.bindString(4, entity.getCountry());
+          statement.bindLong(4, entity.getDateOfBirth());
         }
-        statement.bindLong(5, entity.getLevel());
-        statement.bindLong(6, entity.getXpPoints());
-        statement.bindDouble(7, entity.getTotalDistanceKm());
-        statement.bindLong(8, entity.getTotalHikesCount());
-        if (entity.getProfilePictureUrl() == null) {
-          statement.bindNull(9);
+        if (entity.getCountry() == null) {
+          statement.bindNull(5);
         } else {
-          statement.bindString(9, entity.getProfilePictureUrl());
+          statement.bindString(5, entity.getCountry());
         }
-        if (entity.getBio() == null) {
+        statement.bindLong(6, entity.getLevel());
+        statement.bindLong(7, entity.getXpPoints());
+        statement.bindDouble(8, entity.getTotalDistanceKm());
+        statement.bindLong(9, entity.getTotalHikesCount());
+        if (entity.getProfilePictureUrl() == null) {
           statement.bindNull(10);
         } else {
-          statement.bindString(10, entity.getBio());
+          statement.bindString(10, entity.getProfilePictureUrl());
         }
-        statement.bindLong(11, entity.getCreatedAt());
-        statement.bindLong(12, entity.getLastActive());
-        final int _tmp = entity.isPublic() ? 1 : 0;
-        statement.bindLong(13, _tmp);
+        if (entity.getBio() == null) {
+          statement.bindNull(11);
+        } else {
+          statement.bindString(11, entity.getBio());
+        }
+        statement.bindLong(12, entity.getCreatedAt());
+        statement.bindLong(13, entity.getLastActive());
+        final int _tmp_1 = entity.isPublic() ? 1 : 0;
+        statement.bindLong(14, _tmp_1);
       }
     };
     this.__updateAdapterOfUserEntity = new EntityDeletionOrUpdateAdapter<UserEntity>(__db) {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `users` SET `firebaseUid` = ?,`username` = ?,`age` = ?,`country` = ?,`level` = ?,`xpPoints` = ?,`totalDistanceKm` = ?,`totalHikesCount` = ?,`profilePictureUrl` = ?,`bio` = ?,`createdAt` = ?,`lastActive` = ?,`isPublic` = ? WHERE `firebaseUid` = ?";
+        return "UPDATE OR ABORT `users` SET `firebaseUid` = ?,`username` = ?,`sex` = ?,`dateOfBirth` = ?,`country` = ?,`level` = ?,`xpPoints` = ?,`totalDistanceKm` = ?,`totalHikesCount` = ?,`profilePictureUrl` = ?,`bio` = ?,`createdAt` = ?,`lastActive` = ?,`isPublic` = ? WHERE `firebaseUid` = ?";
       }
 
       @Override
@@ -99,35 +107,41 @@ public final class UserDao_Impl implements UserDao {
           @NonNull final UserEntity entity) {
         statement.bindString(1, entity.getFirebaseUid());
         statement.bindString(2, entity.getUsername());
-        if (entity.getAge() == null) {
+        final String _tmp = Converters.INSTANCE.sexToString(entity.getSex());
+        if (_tmp == null) {
           statement.bindNull(3);
         } else {
-          statement.bindLong(3, entity.getAge());
+          statement.bindString(3, _tmp);
         }
-        if (entity.getCountry() == null) {
+        if (entity.getDateOfBirth() == null) {
           statement.bindNull(4);
         } else {
-          statement.bindString(4, entity.getCountry());
+          statement.bindLong(4, entity.getDateOfBirth());
         }
-        statement.bindLong(5, entity.getLevel());
-        statement.bindLong(6, entity.getXpPoints());
-        statement.bindDouble(7, entity.getTotalDistanceKm());
-        statement.bindLong(8, entity.getTotalHikesCount());
-        if (entity.getProfilePictureUrl() == null) {
-          statement.bindNull(9);
+        if (entity.getCountry() == null) {
+          statement.bindNull(5);
         } else {
-          statement.bindString(9, entity.getProfilePictureUrl());
+          statement.bindString(5, entity.getCountry());
         }
-        if (entity.getBio() == null) {
+        statement.bindLong(6, entity.getLevel());
+        statement.bindLong(7, entity.getXpPoints());
+        statement.bindDouble(8, entity.getTotalDistanceKm());
+        statement.bindLong(9, entity.getTotalHikesCount());
+        if (entity.getProfilePictureUrl() == null) {
           statement.bindNull(10);
         } else {
-          statement.bindString(10, entity.getBio());
+          statement.bindString(10, entity.getProfilePictureUrl());
         }
-        statement.bindLong(11, entity.getCreatedAt());
-        statement.bindLong(12, entity.getLastActive());
-        final int _tmp = entity.isPublic() ? 1 : 0;
-        statement.bindLong(13, _tmp);
-        statement.bindString(14, entity.getFirebaseUid());
+        if (entity.getBio() == null) {
+          statement.bindNull(11);
+        } else {
+          statement.bindString(11, entity.getBio());
+        }
+        statement.bindLong(12, entity.getCreatedAt());
+        statement.bindLong(13, entity.getLastActive());
+        final int _tmp_1 = entity.isPublic() ? 1 : 0;
+        statement.bindLong(14, _tmp_1);
+        statement.bindString(15, entity.getFirebaseUid());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -266,7 +280,8 @@ public final class UserDao_Impl implements UserDao {
         try {
           final int _cursorIndexOfFirebaseUid = CursorUtil.getColumnIndexOrThrow(_cursor, "firebaseUid");
           final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
-          final int _cursorIndexOfAge = CursorUtil.getColumnIndexOrThrow(_cursor, "age");
+          final int _cursorIndexOfSex = CursorUtil.getColumnIndexOrThrow(_cursor, "sex");
+          final int _cursorIndexOfDateOfBirth = CursorUtil.getColumnIndexOrThrow(_cursor, "dateOfBirth");
           final int _cursorIndexOfCountry = CursorUtil.getColumnIndexOrThrow(_cursor, "country");
           final int _cursorIndexOfLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "level");
           final int _cursorIndexOfXpPoints = CursorUtil.getColumnIndexOrThrow(_cursor, "xpPoints");
@@ -283,11 +298,19 @@ public final class UserDao_Impl implements UserDao {
             _tmpFirebaseUid = _cursor.getString(_cursorIndexOfFirebaseUid);
             final String _tmpUsername;
             _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
-            final Integer _tmpAge;
-            if (_cursor.isNull(_cursorIndexOfAge)) {
-              _tmpAge = null;
+            final Sex _tmpSex;
+            final String _tmp;
+            if (_cursor.isNull(_cursorIndexOfSex)) {
+              _tmp = null;
             } else {
-              _tmpAge = _cursor.getInt(_cursorIndexOfAge);
+              _tmp = _cursor.getString(_cursorIndexOfSex);
+            }
+            _tmpSex = Converters.INSTANCE.stringToSex(_tmp);
+            final Long _tmpDateOfBirth;
+            if (_cursor.isNull(_cursorIndexOfDateOfBirth)) {
+              _tmpDateOfBirth = null;
+            } else {
+              _tmpDateOfBirth = _cursor.getLong(_cursorIndexOfDateOfBirth);
             }
             final String _tmpCountry;
             if (_cursor.isNull(_cursorIndexOfCountry)) {
@@ -320,10 +343,10 @@ public final class UserDao_Impl implements UserDao {
             final long _tmpLastActive;
             _tmpLastActive = _cursor.getLong(_cursorIndexOfLastActive);
             final boolean _tmpIsPublic;
-            final int _tmp;
-            _tmp = _cursor.getInt(_cursorIndexOfIsPublic);
-            _tmpIsPublic = _tmp != 0;
-            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpAge,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
+            _tmpIsPublic = _tmp_1 != 0;
+            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
           } else {
             _result = null;
           }
@@ -350,7 +373,8 @@ public final class UserDao_Impl implements UserDao {
         try {
           final int _cursorIndexOfFirebaseUid = CursorUtil.getColumnIndexOrThrow(_cursor, "firebaseUid");
           final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
-          final int _cursorIndexOfAge = CursorUtil.getColumnIndexOrThrow(_cursor, "age");
+          final int _cursorIndexOfSex = CursorUtil.getColumnIndexOrThrow(_cursor, "sex");
+          final int _cursorIndexOfDateOfBirth = CursorUtil.getColumnIndexOrThrow(_cursor, "dateOfBirth");
           final int _cursorIndexOfCountry = CursorUtil.getColumnIndexOrThrow(_cursor, "country");
           final int _cursorIndexOfLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "level");
           final int _cursorIndexOfXpPoints = CursorUtil.getColumnIndexOrThrow(_cursor, "xpPoints");
@@ -367,11 +391,19 @@ public final class UserDao_Impl implements UserDao {
             _tmpFirebaseUid = _cursor.getString(_cursorIndexOfFirebaseUid);
             final String _tmpUsername;
             _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
-            final Integer _tmpAge;
-            if (_cursor.isNull(_cursorIndexOfAge)) {
-              _tmpAge = null;
+            final Sex _tmpSex;
+            final String _tmp;
+            if (_cursor.isNull(_cursorIndexOfSex)) {
+              _tmp = null;
             } else {
-              _tmpAge = _cursor.getInt(_cursorIndexOfAge);
+              _tmp = _cursor.getString(_cursorIndexOfSex);
+            }
+            _tmpSex = Converters.INSTANCE.stringToSex(_tmp);
+            final Long _tmpDateOfBirth;
+            if (_cursor.isNull(_cursorIndexOfDateOfBirth)) {
+              _tmpDateOfBirth = null;
+            } else {
+              _tmpDateOfBirth = _cursor.getLong(_cursorIndexOfDateOfBirth);
             }
             final String _tmpCountry;
             if (_cursor.isNull(_cursorIndexOfCountry)) {
@@ -404,10 +436,10 @@ public final class UserDao_Impl implements UserDao {
             final long _tmpLastActive;
             _tmpLastActive = _cursor.getLong(_cursorIndexOfLastActive);
             final boolean _tmpIsPublic;
-            final int _tmp;
-            _tmp = _cursor.getInt(_cursorIndexOfIsPublic);
-            _tmpIsPublic = _tmp != 0;
-            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpAge,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
+            _tmpIsPublic = _tmp_1 != 0;
+            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
           } else {
             _result = null;
           }
@@ -438,7 +470,8 @@ public final class UserDao_Impl implements UserDao {
         try {
           final int _cursorIndexOfFirebaseUid = CursorUtil.getColumnIndexOrThrow(_cursor, "firebaseUid");
           final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
-          final int _cursorIndexOfAge = CursorUtil.getColumnIndexOrThrow(_cursor, "age");
+          final int _cursorIndexOfSex = CursorUtil.getColumnIndexOrThrow(_cursor, "sex");
+          final int _cursorIndexOfDateOfBirth = CursorUtil.getColumnIndexOrThrow(_cursor, "dateOfBirth");
           final int _cursorIndexOfCountry = CursorUtil.getColumnIndexOrThrow(_cursor, "country");
           final int _cursorIndexOfLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "level");
           final int _cursorIndexOfXpPoints = CursorUtil.getColumnIndexOrThrow(_cursor, "xpPoints");
@@ -456,11 +489,19 @@ public final class UserDao_Impl implements UserDao {
             _tmpFirebaseUid = _cursor.getString(_cursorIndexOfFirebaseUid);
             final String _tmpUsername;
             _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
-            final Integer _tmpAge;
-            if (_cursor.isNull(_cursorIndexOfAge)) {
-              _tmpAge = null;
+            final Sex _tmpSex;
+            final String _tmp;
+            if (_cursor.isNull(_cursorIndexOfSex)) {
+              _tmp = null;
             } else {
-              _tmpAge = _cursor.getInt(_cursorIndexOfAge);
+              _tmp = _cursor.getString(_cursorIndexOfSex);
+            }
+            _tmpSex = Converters.INSTANCE.stringToSex(_tmp);
+            final Long _tmpDateOfBirth;
+            if (_cursor.isNull(_cursorIndexOfDateOfBirth)) {
+              _tmpDateOfBirth = null;
+            } else {
+              _tmpDateOfBirth = _cursor.getLong(_cursorIndexOfDateOfBirth);
             }
             final String _tmpCountry;
             if (_cursor.isNull(_cursorIndexOfCountry)) {
@@ -493,10 +534,10 @@ public final class UserDao_Impl implements UserDao {
             final long _tmpLastActive;
             _tmpLastActive = _cursor.getLong(_cursorIndexOfLastActive);
             final boolean _tmpIsPublic;
-            final int _tmp;
-            _tmp = _cursor.getInt(_cursorIndexOfIsPublic);
-            _tmpIsPublic = _tmp != 0;
-            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpAge,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
+            _tmpIsPublic = _tmp_1 != 0;
+            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
             _result.add(_item);
           }
           return _result;
@@ -528,7 +569,8 @@ public final class UserDao_Impl implements UserDao {
         try {
           final int _cursorIndexOfFirebaseUid = CursorUtil.getColumnIndexOrThrow(_cursor, "firebaseUid");
           final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
-          final int _cursorIndexOfAge = CursorUtil.getColumnIndexOrThrow(_cursor, "age");
+          final int _cursorIndexOfSex = CursorUtil.getColumnIndexOrThrow(_cursor, "sex");
+          final int _cursorIndexOfDateOfBirth = CursorUtil.getColumnIndexOrThrow(_cursor, "dateOfBirth");
           final int _cursorIndexOfCountry = CursorUtil.getColumnIndexOrThrow(_cursor, "country");
           final int _cursorIndexOfLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "level");
           final int _cursorIndexOfXpPoints = CursorUtil.getColumnIndexOrThrow(_cursor, "xpPoints");
@@ -546,11 +588,19 @@ public final class UserDao_Impl implements UserDao {
             _tmpFirebaseUid = _cursor.getString(_cursorIndexOfFirebaseUid);
             final String _tmpUsername;
             _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
-            final Integer _tmpAge;
-            if (_cursor.isNull(_cursorIndexOfAge)) {
-              _tmpAge = null;
+            final Sex _tmpSex;
+            final String _tmp;
+            if (_cursor.isNull(_cursorIndexOfSex)) {
+              _tmp = null;
             } else {
-              _tmpAge = _cursor.getInt(_cursorIndexOfAge);
+              _tmp = _cursor.getString(_cursorIndexOfSex);
+            }
+            _tmpSex = Converters.INSTANCE.stringToSex(_tmp);
+            final Long _tmpDateOfBirth;
+            if (_cursor.isNull(_cursorIndexOfDateOfBirth)) {
+              _tmpDateOfBirth = null;
+            } else {
+              _tmpDateOfBirth = _cursor.getLong(_cursorIndexOfDateOfBirth);
             }
             final String _tmpCountry;
             if (_cursor.isNull(_cursorIndexOfCountry)) {
@@ -583,10 +633,10 @@ public final class UserDao_Impl implements UserDao {
             final long _tmpLastActive;
             _tmpLastActive = _cursor.getLong(_cursorIndexOfLastActive);
             final boolean _tmpIsPublic;
-            final int _tmp;
-            _tmp = _cursor.getInt(_cursorIndexOfIsPublic);
-            _tmpIsPublic = _tmp != 0;
-            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpAge,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
+            _tmpIsPublic = _tmp_1 != 0;
+            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
             _result.add(_item);
           }
           return _result;
