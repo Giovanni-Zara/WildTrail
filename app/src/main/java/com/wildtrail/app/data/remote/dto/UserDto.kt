@@ -1,5 +1,6 @@
 package com.wildtrail.app.data.remote.dto
 
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 
 /**
@@ -15,7 +16,8 @@ import com.wildtrail.app.domain.model.User
 data class UserDto(
     var firebaseUid: String = "",
     var username: String = "",
-    var age: Int? = null,
+    var sex: String? = null,
+    var dateOfBirth: Long? = null,
     var country: String? = null,
     var level: Int = 1,
     var xpPoints: Int = 0,
@@ -28,10 +30,15 @@ data class UserDto(
     var isPublic: Boolean = true,
 )
 
+private fun String?.toSex(): Sex? = this?.let {
+    runCatching { Sex.valueOf(it) }.getOrNull()
+}
+
 fun UserDto.toDomain(): User = User(
     firebaseUid = firebaseUid,
     username = username,
-    age = age,
+    sex = sex.toSex(),
+    dateOfBirth = dateOfBirth,
     country = country,
     level = level,
     xpPoints = xpPoints,
@@ -47,7 +54,8 @@ fun UserDto.toDomain(): User = User(
 fun User.toDto(): UserDto = UserDto(
     firebaseUid = firebaseUid,
     username = username,
-    age = age,
+    sex = sex?.name,
+    dateOfBirth = dateOfBirth,
     country = country,
     level = level,
     xpPoints = xpPoints,

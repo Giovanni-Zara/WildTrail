@@ -25,7 +25,8 @@ fun testUser(
 ): User = User(
     firebaseUid = uid,
     username = name,
-    age = 28,
+    sex = null,
+    dateOfBirth = null,
     country = "IT",
     level = 1,
     xpPoints = 0,
@@ -117,7 +118,16 @@ class FakeAuthRepository : AuthRepository(
         return nextResult
     }
 
-    override suspend fun signUp(email: String, password: String, username: String): Result<User> {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        username: String,
+        sex: com.wildtrail.app.domain.model.Sex,
+        dateOfBirth: Long,
+        country: String,
+        bio: String?,
+        profilePictureUrl: String?,
+    ): Result<User> {
         signUpCalls++
         nextResult.onSuccess { _authState.value = AuthState.SignedIn(it) }
         return nextResult

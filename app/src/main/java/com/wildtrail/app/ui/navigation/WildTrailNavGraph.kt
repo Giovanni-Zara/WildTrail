@@ -10,31 +10,27 @@ import androidx.navigation.navigation
 import com.wildtrail.app.ui.auth.LoginRoute
 import com.wildtrail.app.ui.explore.ExploreRoute
 import com.wildtrail.app.ui.hike.HikeDetailRoute
-import com.wildtrail.app.ui.hike.HikeDetailViewModel
 import com.wildtrail.app.ui.home.HomeRoute
 import com.wildtrail.app.ui.profile.ProfileRoute
 import com.wildtrail.app.ui.tracking.TrackingRoute
 
 /**
- * Defines the navigation graph as a top-level Composable function. Two
- * sub-graphs:
- *
- *  - [Destination.AuthGraph] — only the [Destination.Login] screen lives
- *    here. We swap the active sub-graph when the auth state changes
- *    (see [com.wildtrail.app.ui.WildTrailRoot]).
- *
- *  - [Destination.MainGraph] — Home, Explore, Track, Profile + Hike Detail.
- *
- * Why a graph at all (instead of an `if/else` over Composables)?
- * Navigation Compose gives us back-stack management, deep-linking, type-safe
- * arguments, and saved-state restoration for free. All of that would
- * otherwise have to be reinvented manually.
+ * Navigation graph: an Auth sub-graph and a Main sub-graph. The MainGraph
+ * also exposes a `profile/{uid}` route used by clickable usernames in
+ * reviews, comments, and hike-card creator rows.
  */
 @Composable
 fun WildTrailNavGraph(
     navController: NavHostController,
     startDestination: String,
 ) {
+    val openHike: (String) -> Unit = { hikeId ->
+        navController.navigate(Destination.HikeDetail.create(hikeId))
+    }
+    val openUser: (String) -> Unit = { uid ->
+        navController.navigate(Destination.UserProfile.create(uid))
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -55,27 +51,20 @@ fun WildTrailNavGraph(
             startDestination = Destination.Home.route,
         ) {
             composable(Destination.Home.route) {
-                HomeRoute(
-                    onHikeClick = { hikeId ->
-                        navController.navigate(Destination.HikeDetail.create(hikeId))
-                    },
-                )
+                HomeRoute(onHikeClick = openHike, onUserClick = openUser)
             }
             composable(Destination.Explore.route) {
-                ExploreRoute(
-                    onHikeClick = { hikeId ->
-                        navController.navigate(Destination.HikeDetail.create(hikeId))
-                    },
-                )
+                ExploreRoute(onHikeClick = openHike, onUserClick = openUser)
             }
             composable(Destination.Track.route) {
                 TrackingRoute()
             }
             composable(Destination.Profile.route) {
                 ProfileRoute(
-                    onHikeClick = { hikeId ->
-                        navController.navigate(Destination.HikeDetail.create(hikeId))
-                    },
+                    targetUid = null,
+                    onBack = null,
+                    onHikeClick = openHike,
+                    onUserClick = openUser,
                 )
             }
             composable(
@@ -89,6 +78,22 @@ fun WildTrailNavGraph(
                 HikeDetailRoute(
                     hikeId = hikeId,
                     onBack = { navController.popBackStack() },
+                    onUserClick = openUser,
+                )
+            }
+            composable(
+                route = Destination.UserProfile.route,
+                arguments = listOf(
+                    navArgument(Destination.UserProfile.ARG_UID) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val uid = backStackEntry.arguments?.getString(Destination.UserProfile.ARG_UID)
+                    .orEmpty()
+                ProfileRoute(
+                    targetUid = uid,
+                    onBack = { navController.popBackStack() },
+                    onHikeClick = openHike,
+                    onUserClick = openUser,
                 )
             }
         }
