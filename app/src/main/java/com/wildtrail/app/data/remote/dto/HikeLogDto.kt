@@ -8,13 +8,14 @@ import com.wildtrail.app.domain.model.SurfaceType
  * Firestore document shape for the `hikes` collection.
  *
  * The route is a List<Map<String, Any>> because Firestore can't directly
- * serialise our [GeoPoint] data class (it doesn't reflect Kotlin's
- * @Serializable). Storing them as plain maps keeps the data fully queryable
- * in the Firebase console.
+ * serialise our [GeoPoint] data class. Storing them as plain maps keeps the
+ * data fully queryable in the Firebase console.
  */
 data class HikeLogDto(
     var hikeId: String = "",
     var creatorFirebaseUid: String = "",
+    var creatorUsername: String = "",
+    var creatorProfilePictureUrl: String? = null,
     var workoutId: String? = null,
     var title: String = "",
     var description: String? = null,
@@ -24,7 +25,6 @@ data class HikeLogDto(
     var coverPhotoUrl: String? = null,
     var xpEarned: Int = 0,
     var likesCount: Int = 0,
-    /** Stored as the SurfaceType enum's `name`, e.g. "MOUNTAIN". */
     var surfaceType: String = SurfaceType.OTHER.name,
     var lengthKm: Double = 0.0,
     var durationSeconds: Long = 0L,
@@ -33,6 +33,14 @@ data class HikeLogDto(
     var elevationGainMeters: Int = 0,
     var routeCoordinates: List<Map<String, Any?>> = emptyList(),
     var isPrivate: Boolean = false,
+    var difficultyLevel: Int = 3,
+    var mudRisk: Int = 3,
+    var pathClarity: Int = 3,
+    var fatigueLevel: Int = 3,
+    var animalEncounterRisk: Int = 3,
+    var waterAvailability: Boolean = false,
+    var averageRating: Double = 0.0,
+    var reviewCount: Int = 0,
 )
 
 private fun SurfaceType.code(): String = name
@@ -42,6 +50,8 @@ private fun String.toSurfaceType(): SurfaceType =
 fun HikeLogDto.toDomain(): HikeLog = HikeLog(
     hikeId = hikeId,
     creatorFirebaseUid = creatorFirebaseUid,
+    creatorUsername = creatorUsername,
+    creatorProfilePictureUrl = creatorProfilePictureUrl,
     workoutId = workoutId,
     title = title,
     description = description,
@@ -66,11 +76,21 @@ fun HikeLogDto.toDomain(): HikeLog = HikeLog(
         )
     },
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating.toFloat(),
+    reviewCount = reviewCount,
 )
 
 fun HikeLog.toDto(): HikeLogDto = HikeLogDto(
     hikeId = hikeId,
     creatorFirebaseUid = creatorFirebaseUid,
+    creatorUsername = creatorUsername,
+    creatorProfilePictureUrl = creatorProfilePictureUrl,
     workoutId = workoutId,
     title = title,
     description = description,
@@ -95,4 +115,12 @@ fun HikeLog.toDto(): HikeLogDto = HikeLogDto(
         )
     },
     isPrivate = isPrivate,
+    difficultyLevel = difficultyLevel,
+    mudRisk = mudRisk,
+    pathClarity = pathClarity,
+    fatigueLevel = fatigueLevel,
+    animalEncounterRisk = animalEncounterRisk,
+    waterAvailability = waterAvailability,
+    averageRating = averageRating.toDouble(),
+    reviewCount = reviewCount,
 )

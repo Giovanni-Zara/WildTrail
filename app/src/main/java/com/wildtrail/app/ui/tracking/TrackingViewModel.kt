@@ -9,6 +9,7 @@ import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
 import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
@@ -47,6 +48,7 @@ enum class TrackingStatus { IDLE, RECORDING, PAUSED, STOPPED }
 class TrackingViewModel(
     private val locationTracker: LocationTracker,
     private val hikeLogRepository: HikeLogRepository,
+    private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
@@ -101,8 +103,24 @@ class TrackingViewModel(
         _uiState.update { it.copy(status = TrackingStatus.STOPPED) }
     }
 
-    /** Persist the recorded hike. Called from the "save" UI on the summary screen. */
-    fun saveHike(title: String, description: String?, surfaceType: SurfaceType, isPrivate: Boolean) {
+    /**
+     * Persist the recorded hike. The "characteristics" (difficulty, mud, …)
+     * are filled in by the creator at save time and live on the [HikeLog]
+     * itself; *other* users then leave [com.wildtrail.app.domain.model.TrailReview]s
+     * whose `overallRating`s are averaged into [HikeLog.averageRating].
+     */
+    fun saveHike(
+        title: String,
+        description: String?,
+        surfaceType: SurfaceType,
+        isPrivate: Boolean,
+        difficultyLevel: Int,
+        mudRisk: Int,
+        pathClarity: Int,
+        fatigueLevel: Int,
+        animalEncounterRisk: Int,
+        waterAvailability: Boolean,
+    ) {
         val state = _uiState.value
         val auth = authRepository.authState.value
         if (auth !is AuthState.SignedIn) {
@@ -114,6 +132,8 @@ class TrackingViewModel(
         val hike = HikeLog(
             hikeId = UUID.randomUUID().toString(),
             creatorFirebaseUid = auth.user.firebaseUid,
+            creatorUsername = auth.user.username,
+            creatorProfilePictureUrl = auth.user.profilePictureUrl,
             workoutId = null,
             title = title.ifBlank { "My hike" },
             description = description,
@@ -131,9 +151,30 @@ class TrackingViewModel(
             elevationGainMeters = state.elevationGainM,
             routeCoordinates = state.routePoints,
             isPrivate = isPrivate,
+            difficultyLevel = difficultyLevel,
+            mudRisk = mudRisk,
+            pathClarity = pathClarity,
+            fatigueLevel = fatigueLevel,
+            animalEncounterRisk = animalEncounterRisk,
+            waterAvailability = waterAvailability,
+            averageRating = 0f,
+            reviewCount = 0,
         )
         viewModelScope.launch {
-            runCatching { hikeLogRepository.saveHike(hike) }
+            runCatching {
+                hikeLogRepository.saveHike(hike)
+                // Bump the cached user totals so the Profile screen reflects
+                // the new hike count / XP / level immediately. Wrapped in a
+                // separate runCatching so a failure here can't cause the
+                // user to see "Could not save hike" when the hike *was* saved.
+                runCatching {
+                    userRepository.incrementHikeStats(
+                        uid = auth.user.firebaseUid,
+                        distanceKm = hike.lengthKm,
+                        xpEarned = hike.xpEarned,
+                    )
+                }
+            }
                 .onSuccess { _uiState.update { it.copy(saved = true) } }
                 .onFailure { err ->
                     _uiState.update { it.copy(errorMessage = err.message ?: "Could not save hike") }
@@ -190,6 +231,7 @@ class TrackingViewModel(
                 TrackingViewModel(
                     locationTracker = app.container.locationTracker,
                     hikeLogRepository = app.container.hikeLogRepository,
+                    userRepository = app.container.userRepository,
                     authRepository = app.container.authRepository,
                 )
             }

@@ -20,11 +20,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val currentUser: User? = null,
     val recentHikes: List<HikeLog> = emptyList(),
     val publicFeed: List<HikeLog> = emptyList(),
+    val likedHikeIds: Set<String> = emptySet(),
     val isOffline: Boolean = false,
 )
 
@@ -37,34 +39,30 @@ class HomeViewModel(
     private val publicFeed: Flow<List<HikeLog>> =
         hikeLogRepository.observePublicFeed(20)
 
-    /**
-     * `flatMapLatest` is the idiomatic way to "switch" a flow when an
-     * upstream value changes — exactly what we need when the logged-in user
-     * changes and we have to re-subscribe to *their* hikes.
-     */
-    private val myHikes: Flow<List<HikeLog>> = authRepository.authState
+    private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
+
+    private val myHikes: Flow<List<HikeLog>> = currentUidFlow
         .flatMapLatest { uid ->
             if (uid == null) flowOf(emptyList()) else hikeLogRepository.observeMyHikes(uid)
         }
 
-    /**
-     * `combine` merges three independent flows into one [StateFlow] — every
-     * time any of them emits, the UI gets a fresh snapshot. `stateIn`
-     * upgrades it to a hot StateFlow with a 5-second sharing timeout, so it
-     * survives short config changes without restarting upstream collections
-     * (avoids the "double-fetch on rotation" anti-pattern).
-     */
+    private val likedHikeIds: Flow<Set<String>> = currentUidFlow
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(emptySet()) else hikeLogRepository.observeMyLikedHikeIds(uid)
+        }
+
     val uiState: StateFlow<HomeUiState> = combine(
         authRepository.authState,
         publicFeed,
         myHikes,
-    ) { auth, publicHikes, mine ->
+        likedHikeIds,
+    ) { auth, publicHikes, mine, liked ->
         HomeUiState(
             currentUser = (auth as? AuthState.SignedIn)?.user,
             recentHikes = mine,
             publicFeed = publicHikes,
-            isOffline = false,
+            likedHikeIds = liked,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -73,6 +71,19 @@ class HomeViewModel(
     )
 
     fun signOut() = authRepository.signOut()
+
+    suspend fun refresh() {
+        runCatching { hikeLogRepository.refresh() }
+    }
+
+    fun toggleLike(hike: HikeLog) {
+        val uid = uiState.value.currentUser?.firebaseUid ?: return
+        viewModelScope.launch {
+            runCatching {
+                hikeLogRepository.setLiked(uid, hike.hikeId, hike.hikeId !in uiState.value.likedHikeIds)
+            }
+        }
+    }
 
     companion object {
         fun factory(): ViewModelProvider.Factory = viewModelFactory {

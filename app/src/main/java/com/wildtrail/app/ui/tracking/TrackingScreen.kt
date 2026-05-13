@@ -4,18 +4,23 @@ import android.Manifest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,9 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.wildtrail.app.domain.model.SurfaceType
+import com.wildtrail.app.ui.components.RatingRow
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -50,14 +55,12 @@ fun TrackingRoute(
         listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
     )
 
-    // Permission state -> ViewModel one-way data flow.
     LaunchedEffect(permissions.allPermissionsGranted) {
         viewModel.onPermissionResult(permissions.allPermissionsGranted)
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
     if (state.status == TrackingStatus.STOPPED && !state.saved) {
-        // Auto-open save dialog when the user finishes a hike.
         LaunchedEffect(Unit) { showSaveDialog = true }
     }
 
@@ -93,8 +96,19 @@ fun TrackingRoute(
     if (showSaveDialog) {
         SaveHikeDialog(
             distanceKm = state.distanceKm,
-            onConfirm = { title, description, surfaceType, isPrivate ->
-                viewModel.saveHike(title, description, surfaceType, isPrivate)
+            onConfirm = { req ->
+                viewModel.saveHike(
+                    title = req.title,
+                    description = req.description,
+                    surfaceType = req.surfaceType,
+                    isPrivate = req.isPrivate,
+                    difficultyLevel = req.difficultyLevel,
+                    mudRisk = req.mudRisk,
+                    pathClarity = req.pathClarity,
+                    fatigueLevel = req.fatigueLevel,
+                    animalEncounterRisk = req.animalEncounterRisk,
+                    waterAvailability = req.waterAvailability,
+                )
                 showSaveDialog = false
             },
             onDismiss = {
@@ -106,7 +120,6 @@ fun TrackingRoute(
 
     if (state.saved) {
         LaunchedEffect(Unit) {
-            // Tiny delay so the user sees the change, then reset.
             kotlinx.coroutines.delay(800)
             viewModel.resetAfterSave()
         }
@@ -210,35 +223,75 @@ private fun ControlButtons(
 
         TrackingStatus.STOPPED -> Box(modifier = Modifier.fillMaxWidth()) {
             Text(
-                "Hike finished — saving prompt will open",
+                "Hike finished — fill in the details to save",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
 }
 
+/**
+ * Aggregated request for [TrackingViewModel.saveHike] — keeps the dialog
+ * callback signature short.
+ */
+private data class SaveHikeRequest(
+    val title: String,
+    val description: String?,
+    val surfaceType: SurfaceType,
+    val isPrivate: Boolean,
+    val difficultyLevel: Int,
+    val mudRisk: Int,
+    val pathClarity: Int,
+    val fatigueLevel: Int,
+    val animalEncounterRisk: Int,
+    val waterAvailability: Boolean,
+)
+
 @Composable
 private fun SaveHikeDialog(
     distanceKm: Float,
-    onConfirm: (title: String, description: String?, surface: SurfaceType, isPrivate: Boolean) -> Unit,
+    onConfirm: (SaveHikeRequest) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var isPrivate by remember { mutableStateOf(false) }
-    val surface = SurfaceType.MOUNTAIN
+    var surface by remember { mutableStateOf(SurfaceType.MOUNTAIN) }
+
+    var difficulty by remember { mutableStateOf(3) }
+    var mud by remember { mutableStateOf(3) }
+    var clarity by remember { mutableStateOf(3) }
+    var fatigue by remember { mutableStateOf(3) }
+    var animal by remember { mutableStateOf(3) }
+    var water by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            Button(onClick = { onConfirm(title, description.takeIf { it.isNotBlank() }, surface, isPrivate) }) {
-                Text("Save")
-            }
+            Button(onClick = {
+                onConfirm(
+                    SaveHikeRequest(
+                        title = title,
+                        description = description.takeIf { it.isNotBlank() },
+                        surfaceType = surface,
+                        isPrivate = isPrivate,
+                        difficultyLevel = difficulty,
+                        mudRisk = mud,
+                        pathClarity = clarity,
+                        fatigueLevel = fatigue,
+                        animalEncounterRisk = animal,
+                        waterAvailability = water,
+                    ),
+                )
+            }) { Text("Save") }
         },
         dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Discard") } },
         title = { Text("Save hike (${"%.2f".format(distanceKm)} km)") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -250,9 +303,46 @@ private fun SaveHikeDialog(
                     onValueChange = { description = it },
                     label = { Text("Description (optional)") },
                 )
+
+                Text("Surface type", style = MaterialTheme.typography.labelLarge)
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    SurfaceType.values().forEach { st ->
+                        FilterChip(
+                            selected = st == surface,
+                            onClick = { surface = st },
+                            label = { Text(st.label(), maxLines = 1) },
+                        )
+                    }
+                }
+
+                Text("Trail characteristics", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "These appear on the hike card and help others know what to expect.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                RatingRow("Difficulty", difficulty, { difficulty = it })
+                RatingRow("Mud risk", mud, { mud = it })
+                RatingRow("Path clarity", clarity, { clarity = it })
+                RatingRow("Fatigue", fatigue, { fatigue = it })
+                RatingRow("Animal encounter risk", animal, { animal = it })
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(checked = water, onCheckedChange = { water = it })
+                    Text(
+                        "  Water sources available",
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = isPrivate, onCheckedChange = { isPrivate = it })
-                    Spacer(Modifier.height(0.dp))
                     Text(
                         if (isPrivate) "Private (only you)" else "Public",
                         modifier = Modifier.padding(start = 8.dp),
@@ -261,6 +351,15 @@ private fun SaveHikeDialog(
             }
         },
     )
+}
+
+private fun SurfaceType.label() = when (this) {
+    SurfaceType.MOUNTAIN -> "Mountain"
+    SurfaceType.FOREST -> "Forest"
+    SurfaceType.COASTAL -> "Coastal"
+    SurfaceType.URBAN -> "Urban"
+    SurfaceType.DESERT -> "Desert"
+    SurfaceType.OTHER -> "Other"
 }
 
 private fun formatDuration(seconds: Long): String {

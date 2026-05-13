@@ -22,17 +22,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Tests for [HikeLogRepository] using a real in-memory Room DB and a
- * hand-rolled fake [FirestoreService] that backs its observations with a
- * MutableStateFlow we can write to from the test.
- *
- * EXPECTED for each test: the repository emits the expected domain models.
- *
- * No Mockito needed: the [FirestoreService] base class accepts a nullable
- * [com.google.firebase.firestore.FirebaseFirestore], so the fake can pass
- * `null` and override every method it actually needs.
- */
 @RunWith(AndroidJUnit4::class)
 class HikeLogRepositoryTest {
 
@@ -47,18 +36,19 @@ class HikeLogRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(ctx, WildTrailDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        // FK constraint: every hike needs an existing user row.
         db.userDao().upsert(
             UserEntity(
-                firebaseUid = "uid-1", username = "g", age = null, country = null,
-                level = 1, xpPoints = 0, totalDistanceKm = 0f, totalHikesCount = 0,
-                profilePictureUrl = null, bio = null, createdAt = 0L, lastActive = 0L,
-                isPublic = true,
+                firebaseUid = "uid-1", username = "g", sex = null, dateOfBirth = null,
+                country = null, level = 1, xpPoints = 0, totalDistanceKm = 0f,
+                totalHikesCount = 0, profilePictureUrl = null, bio = null,
+                createdAt = 0L, lastActive = 0L, isPublic = true,
             ),
         )
         fakeFirestore = FakeFirestoreService()
         repo = HikeLogRepository(
             hikeLogDao = db.hikeLogDao(),
+            likeDao = db.likeDao(),
+            reviewDao = db.trailReviewDao(),
             firestore = fakeFirestore,
             externalScope = scope,
         )
@@ -67,10 +57,6 @@ class HikeLogRepositoryTest {
     @After
     fun tearDown() = db.close()
 
-    /**
-     * EXPECTED: after saving a hike via the repository, observeMyHikes
-     *           emits a list containing that hike.
-     */
     @Test
     fun saveHike_appearsInLocalFeed() = runBlocking {
         val hike = sampleHike("h1")
@@ -80,10 +66,6 @@ class HikeLogRepositoryTest {
         assertEquals("h1", feed.first().hikeId)
     }
 
-    /**
-     * EXPECTED: saveHike forwards the hike to Firestore (verified by checking
-     *           the fake's recorded calls).
-     */
     @Test
     fun saveHike_pushesToFirestore() = runBlocking {
         val hike = sampleHike("h1")
@@ -95,6 +77,8 @@ class HikeLogRepositoryTest {
     private fun sampleHike(id: String) = HikeLog(
         hikeId = id,
         creatorFirebaseUid = "uid-1",
+        creatorUsername = "g",
+        creatorProfilePictureUrl = null,
         workoutId = null,
         title = "Sample",
         description = null,
@@ -112,11 +96,17 @@ class HikeLogRepositoryTest {
         elevationGainMeters = 50,
         routeCoordinates = emptyList(),
         isPrivate = false,
+        difficultyLevel = 3,
+        mudRisk = 3,
+        pathClarity = 3,
+        fatigueLevel = 3,
+        animalEncounterRisk = 3,
+        waterAvailability = false,
+        averageRating = 0f,
+        reviewCount = 0,
     )
 }
 
-/** Minimal fake [FirestoreService]. Pass `null` to the parent so we never
- *  hit Firebase initialisation; override only the methods this test exercises. */
 class FakeFirestoreService : FirestoreService(db = null) {
     val upsertHikeCalls = mutableListOf<HikeLogDto>()
     private val publicHikes = MutableStateFlow<List<HikeLogDto>>(emptyList())

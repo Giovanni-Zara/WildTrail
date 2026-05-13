@@ -1,21 +1,12 @@
 package com.wildtrail.app.data.local.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.EmergencyContact
 
 @Entity(
     tableName = "emergency_contacts",
-    foreignKeys = [
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["userUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
     indices = [Index("userUid")],
 )
 data class EmergencyContactEntity(
