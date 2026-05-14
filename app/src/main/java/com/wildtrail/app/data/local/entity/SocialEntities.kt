@@ -1,7 +1,6 @@
 package com.wildtrail.app.data.local.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.FollowedTrail
@@ -10,24 +9,10 @@ import com.wildtrail.app.domain.model.UserFollow
 
 // --- User-follows-User ---------------------------------------------------
 
-/** UNIQUE on (followerUid, followeeUid). */
+/** UNIQUE on (followerUid, followeeUid). No FK — cross-device. */
 @Entity(
     tableName = "user_follows",
     primaryKeys = ["followerUid", "followeeUid"],
-    foreignKeys = [
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["followerUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["followeeUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
     indices = [Index("followeeUid")],
 )
 data class UserFollowEntity(
@@ -56,20 +41,6 @@ fun UserFollow.toEntity(): UserFollowEntity = UserFollowEntity(
 @Entity(
     tableName = "followed_trails",
     primaryKeys = ["userUid", "hikeId"],
-    foreignKeys = [
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["userUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-        ForeignKey(
-            entity = HikeLogEntity::class,
-            parentColumns = ["hikeId"],
-            childColumns = ["hikeId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
     indices = [Index("hikeId")],
 )
 data class FollowedTrailEntity(
@@ -97,20 +68,6 @@ fun FollowedTrail.toEntity(): FollowedTrailEntity = FollowedTrailEntity(
 
 @Entity(
     tableName = "hike_comments",
-    foreignKeys = [
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["authorUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-        ForeignKey(
-            entity = HikeLogEntity::class,
-            parentColumns = ["hikeId"],
-            childColumns = ["hikeId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
     indices = [Index("hikeId"), Index("authorUid")],
 )
 data class HikeCommentEntity(

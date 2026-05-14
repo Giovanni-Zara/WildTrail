@@ -1,9 +1,12 @@
 package com.wildtrail.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,8 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,19 +36,20 @@ import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
 import com.wildtrail.app.ui.components.HikeCard
 
-/**
- * Stateful entry-point: collects [HomeUiState] and forwards it down.
- */
 @Composable
 fun HomeRoute(
     onHikeClick: (String) -> Unit,
+    onUserClick: (String) -> Unit,
     viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     HomeContent(
         state = state,
         onHikeClick = onHikeClick,
+        onUserClick = onUserClick,
         onSignOut = viewModel::signOut,
+        onRefresh = { viewModel.refresh() },
+        onToggleLike = viewModel::toggleLike,
     )
 }
 
@@ -48,8 +58,21 @@ fun HomeRoute(
 fun HomeContent(
     state: HomeUiState,
     onHikeClick: (String) -> Unit,
+    onUserClick: (String) -> Unit,
     onSignOut: () -> Unit,
+    onRefresh: suspend () -> Unit,
+    onToggleLike: (HikeLog) -> Unit,
 ) {
+    var refreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(refreshing) {
+        if (refreshing) {
+            onRefresh()
+            // Hold the indicator visible for ~900ms so the user can see it spin.
+            kotlinx.coroutines.delay(900L)
+            refreshing = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -67,46 +90,61 @@ fun HomeContent(
             )
         },
     ) { padding: PaddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { refreshing = true },
+            modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            item {
-                Spacer(Modifier.height(8.dp))
-                if (state.currentUser != null) {
-                    StatsRow(state.currentUser)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text("Recently from you", style = MaterialTheme.typography.titleLarge)
-            }
-            if (state.recentHikes.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 item {
-                    Text(
-                        "Your hikes will appear here once you record one.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.height(8.dp))
+                    if (state.currentUser != null) {
+                        StatsRow(state.currentUser)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("Recently from you", style = MaterialTheme.typography.titleLarge)
+                }
+                if (state.recentHikes.isEmpty()) {
+                    item {
+                        Text(
+                            "Your hikes will appear here once you record one.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    items(state.recentHikes, key = { "mine-${it.hikeId}" }) { hike ->
+                        HikeCard(
+                            hike = hike,
+                            isLiked = hike.hikeId in state.likedHikeIds,
+                            onClick = { onHikeClick(hike.hikeId) },
+                            onLikeClick = { onToggleLike(hike) },
+                            onCreatorClick = onUserClick,
+                            currentUserUid = state.currentUser?.firebaseUid,
+                        )
+                    }
+                }
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Trending publicly", style = MaterialTheme.typography.titleLarge)
+                }
+                val mineIds = state.recentHikes.mapTo(HashSet()) { it.hikeId }
+                val publicOthers = state.publicFeed.filter { it.hikeId !in mineIds }
+                items(publicOthers, key = { "public-${it.hikeId}" }) { hike ->
+                    HikeCard(
+                        hike = hike,
+                        isLiked = hike.hikeId in state.likedHikeIds,
+                        onClick = { onHikeClick(hike.hikeId) },
+                        onLikeClick = { onToggleLike(hike) },
+                        onCreatorClick = onUserClick,
+                        currentUserUid = state.currentUser?.firebaseUid,
                     )
                 }
-            } else {
-                // Namespace keys per section: a public hike of the current
-                // user can appear in BOTH recentHikes and publicFeed and
-                // LazyColumn forbids duplicate keys across the whole list.
-                items(state.recentHikes, key = { "mine-${it.hikeId}" }) { hike ->
-                    HikeCard(hike = hike, onClick = { onHikeClick(hike.hikeId) })
-                }
-            }
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text("Trending publicly", style = MaterialTheme.typography.titleLarge)
-            }
-            // Hide hikes that are already shown in "your recent hikes" so the
-            // user doesn't see duplicates AND we keep keys collision-free.
-            val mineIds = state.recentHikes.mapTo(HashSet()) { it.hikeId }
-            val publicOthers = state.publicFeed.filter { it.hikeId !in mineIds }
-            items(publicOthers, key = { "public-${it.hikeId}" }) { hike ->
-                HikeCard(hike = hike, onClick = { onHikeClick(hike.hikeId) })
+                item { Spacer(Modifier.height(24.dp)) }
             }
         }
     }
@@ -114,10 +152,11 @@ fun HomeContent(
 
 @Composable
 private fun StatsRow(user: User) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .fillMaxWidth(),
     ) {
         StatBlock(label = "Hikes", value = user.totalHikesCount.toString())
         StatBlock(label = "Distance", value = "%.1f km".format(user.totalDistanceKm))
@@ -128,9 +167,7 @@ private fun StatsRow(user: User) {
 
 @Composable
 private fun StatBlock(label: String, value: String) {
-    androidx.compose.foundation.layout.Column(
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.titleLarge)
         Text(label, style = MaterialTheme.typography.labelSmall)
     }

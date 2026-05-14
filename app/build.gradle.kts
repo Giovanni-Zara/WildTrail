@@ -16,6 +16,7 @@ val localProperties = Properties().apply {
     if (file.exists()) load(file.inputStream())
 }
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
+val googleWebClientId: String = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: ""
 
 android {
     namespace = "com.wildtrail.app"
@@ -35,6 +36,11 @@ android {
 
         // Forwarded into AndroidManifest.xml via ${MAPS_API_KEY}
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+
+        // Exposed as BuildConfig.GOOGLE_WEB_CLIENT_ID. Empty by default —
+        // the Google Sign-In button reads it and shows a setup-required
+        // message until you fill in local.properties.
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -141,6 +147,11 @@ dependencies {
 
     // Permissions helper
     implementation(libs.accompanist.permissions)
+
+    // Google Sign-In via Credential Manager
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.playservices)
+    implementation(libs.google.id)
 
     // ---------- Testing ----------
     testImplementation(libs.junit)

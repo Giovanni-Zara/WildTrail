@@ -26,6 +26,11 @@ interface HikeLogDao {
     @Query("SELECT * FROM hike_logs WHERE creatorFirebaseUid = :uid ORDER BY endedAt DESC")
     fun observeByCreator(uid: String): Flow<List<HikeLogEntity>>
 
+    /** One-shot variant used by the backfill path that patches the
+     *  denormalised creator info on legacy hikes. */
+    @Query("SELECT * FROM hike_logs WHERE creatorFirebaseUid = :uid")
+    suspend fun getByCreator(uid: String): List<HikeLogEntity>
+
     /** "Explore" feed: only public hikes, most recent first. */
     @Query("SELECT * FROM hike_logs WHERE isPrivate = 0 ORDER BY endedAt DESC LIMIT :limit")
     fun observePublicFeed(limit: Int = 50): Flow<List<HikeLogEntity>>

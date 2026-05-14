@@ -81,6 +81,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val hikeLogRepository: HikeLogRepository = HikeLogRepository(
         hikeLogDao = database.hikeLogDao(),
+        likeDao = database.likeDao(),
+        reviewDao = database.trailReviewDao(),
+        userDao = database.userDao(),
         firestore = firestore,
         externalScope = appScope,
     )

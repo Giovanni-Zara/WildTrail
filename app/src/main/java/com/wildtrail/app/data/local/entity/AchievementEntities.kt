@@ -1,7 +1,6 @@
 package com.wildtrail.app.data.local.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.AchievementCategory
@@ -39,24 +38,10 @@ fun AchievementDefinition.toEntity(): AchievementDefinitionEntity = AchievementD
     thresholdValue = thresholdValue,
 )
 
-/** UNIQUE on (userUid, achievementId). */
+/** UNIQUE on (userUid, achievementId). No FK — cross-device. */
 @Entity(
     tableName = "user_achievements",
     primaryKeys = ["userUid", "achievementId"],
-    foreignKeys = [
-        ForeignKey(
-            entity = UserEntity::class,
-            parentColumns = ["firebaseUid"],
-            childColumns = ["userUid"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-        ForeignKey(
-            entity = AchievementDefinitionEntity::class,
-            parentColumns = ["achievementId"],
-            childColumns = ["achievementId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
     indices = [Index("achievementId")],
 )
 data class UserAchievementEntity(

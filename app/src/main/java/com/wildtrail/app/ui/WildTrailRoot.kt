@@ -9,6 +9,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -23,12 +27,14 @@ import com.wildtrail.app.ui.navigation.bottomNavItems
  * Root composable for the entire app.
  *
  *  - Owns the [androidx.navigation.NavHostController].
- *  - Watches the auth state and switches between the auth sub-graph and the
- *    main sub-graph, popping the back-stack so the user can't navigate
- *    back into the wrong half.
- *  - Hosts the Material 3 [Scaffold]: the standard "slot" for a top bar /
- *    bottom bar / floating action button. Compose calls these "slots" in
- *    its API; the assignment specifies them as the structural primitives.
+ *  - Watches the auth state and **only when it transitions** (signed-in ↔
+ *    signed-out) does it swap the active sub-graph. We track the last
+ *    *kind* of auth state we navigated for in a [rememberSaveable] flag, so
+ *    a configuration change (rotation) doesn't fire a no-op navigation
+ *    that would otherwise reset the back stack.
+ *
+ *  - Hosts the Material 3 [Scaffold] — the standard "slot" for top bar,
+ *    bottom bar, and floating action button.
  */
 @Composable
 fun WildTrailRoot(
@@ -37,29 +43,34 @@ fun WildTrailRoot(
 ) {
     val navController = rememberNavController()
 
-    // Decide which sub-graph is the start destination based on the current
-    // auth state. Using `LaunchedEffect(authState)` we also force a
-    // navigation when the user logs in / out at runtime.
     val startDestination = when (authState) {
         is AuthState.SignedIn -> Destination.MainGraph.route
         else -> Destination.AuthGraph.route
     }
 
+    // Persist the *kind* of auth state we've already responded to across
+    // configuration changes. Rotation -> same flag -> no re-navigation.
+    var lastHandledSignedIn by rememberSaveable {
+        mutableStateOf<Boolean?>(null)
+    }
+
     LaunchedEffect(authState) {
-        when (authState) {
-            is AuthState.SignedIn -> {
-                navController.navigate(Destination.MainGraph.route) {
-                    popUpTo(Destination.AuthGraph.route) { inclusive = true }
-                    launchSingleTop = true
-                }
+        val signedInNow = authState is AuthState.SignedIn
+        val isLoading = authState is AuthState.Loading
+        if (isLoading) return@LaunchedEffect
+        // Only react to actual transitions.
+        if (lastHandledSignedIn == signedInNow) return@LaunchedEffect
+        lastHandledSignedIn = signedInNow
+        if (signedInNow) {
+            navController.navigate(Destination.MainGraph.route) {
+                popUpTo(Destination.AuthGraph.route) { inclusive = true }
+                launchSingleTop = true
             }
-            AuthState.SignedOut -> {
-                navController.navigate(Destination.AuthGraph.route) {
-                    popUpTo(Destination.MainGraph.route) { inclusive = true }
-                    launchSingleTop = true
-                }
+        } else {
+            navController.navigate(Destination.AuthGraph.route) {
+                popUpTo(Destination.MainGraph.route) { inclusive = true }
+                launchSingleTop = true
             }
-            AuthState.Loading -> Unit
         }
     }
 

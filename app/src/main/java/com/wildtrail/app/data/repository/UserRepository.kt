@@ -8,6 +8,7 @@ import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.util.LevelMath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -25,10 +26,8 @@ import kotlinx.coroutines.flow.onEach
  *      data automatically.
  *
  * Write path:
- *   1. Push to Firestore (remote is the source of truth for user profiles).
- *   2. Mirror into Room so the UI updates immediately.
- *
- * Crash-safety: Firestore listener errors are logged and swallowed.
+ *   1. Push to Room (offline-first).
+ *   2. Push to Firestore (best-effort; failures logged, not crashing).
  */
 class UserRepository(
     private val userDao: UserDao,
@@ -45,10 +44,30 @@ class UserRepository(
         return userDao.observeById(uid).map { it?.toDomain() }
     }
 
+    suspend fun getUser(uid: String): User? = userDao.getById(uid)?.toDomain()
+
     suspend fun updateUser(user: User) {
         userDao.upsert(user.toEntity())
         runCatching { firestore.upsertUser(user.toDto()) }
             .onFailure { Log.w(TAG, "Firestore profile update skipped", it) }
+    }
+
+    /**
+     * Called once per saved hike to bump the cached user totals. Stays
+     * idempotent because `lastActive` is also touched — repeated calls just
+     * advance counts further.
+     */
+    suspend fun incrementHikeStats(uid: String, distanceKm: Float, xpEarned: Int) {
+        val current = userDao.getById(uid)?.toDomain() ?: return
+        val newXp = current.xpPoints + xpEarned
+        val updated = current.copy(
+            xpPoints = newXp,
+            level = LevelMath.levelForXp(newXp),
+            totalHikesCount = current.totalHikesCount + 1,
+            totalDistanceKm = current.totalDistanceKm + distanceKm,
+            lastActive = System.currentTimeMillis(),
+        )
+        updateUser(updated)
     }
 
     suspend fun search(query: String): List<User> =

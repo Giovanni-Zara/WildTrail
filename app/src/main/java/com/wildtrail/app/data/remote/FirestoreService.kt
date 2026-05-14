@@ -8,6 +8,7 @@ import com.wildtrail.app.data.remote.dto.EmergencyContactDto
 import com.wildtrail.app.data.remote.dto.FollowedTrailDto
 import com.wildtrail.app.data.remote.dto.HikeCommentDto
 import com.wildtrail.app.data.remote.dto.HikeLogDto
+import com.wildtrail.app.data.remote.dto.LikeDto
 import com.wildtrail.app.data.remote.dto.TrailReviewDto
 import com.wildtrail.app.data.remote.dto.UserAchievementDto
 import com.wildtrail.app.data.remote.dto.UserDto
@@ -48,6 +49,7 @@ open class FirestoreService(
     private val achievementDefs get() = realDb.collection(ACHIEVEMENT_DEFS)
     private val userAchievements get() = realDb.collection(USER_ACHIEVEMENTS)
     private val emergencyContacts get() = realDb.collection(EMERGENCY_CONTACTS)
+    private val likes get() = realDb.collection(LIKES)
 
     // ---- Users ---------------------------------------------------------
 
@@ -186,6 +188,27 @@ open class FirestoreService(
         emergencyContacts.document(id).delete().await()
     }
 
+    // ---- Likes ---------------------------------------------------------
+
+    open suspend fun like(dto: LikeDto) {
+        likes.document("${dto.userUid}_${dto.hikeId}").set(dto).await()
+    }
+
+    open suspend fun unlike(uid: String, hikeId: String) {
+        likes.document("${uid}_$hikeId").delete().await()
+    }
+
+    open fun observeLikesForHike(hikeId: String): Flow<List<LikeDto>> = callbackFlow {
+        val reg = likes.whereEqualTo("hikeId", hikeId)
+            .addSnapshotListener { snap, err ->
+                if (err != null) {
+                    close(err); return@addSnapshotListener
+                }
+                trySend(snap?.documents?.mapNotNull { it.toObject<LikeDto>() } ?: emptyList())
+            }
+        awaitClose { reg.remove() }
+    }
+
     private companion object {
         const val USERS = "users"
         const val HIKES = "hikes"
@@ -196,5 +219,6 @@ open class FirestoreService(
         const val ACHIEVEMENT_DEFS = "achievement_definitions"
         const val USER_ACHIEVEMENTS = "user_achievements"
         const val EMERGENCY_CONTACTS = "emergency_contacts"
+        const val LIKES = "likes"
     }
 }
