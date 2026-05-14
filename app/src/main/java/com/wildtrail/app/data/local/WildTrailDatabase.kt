@@ -11,6 +11,7 @@ import com.wildtrail.app.data.local.dao.EmergencyContactDao
 import com.wildtrail.app.data.local.dao.FollowedTrailDao
 import com.wildtrail.app.data.local.dao.HikeCommentDao
 import com.wildtrail.app.data.local.dao.HikeLogDao
+import com.wildtrail.app.data.local.dao.LikeDao
 import com.wildtrail.app.data.local.dao.TrailReviewDao
 import com.wildtrail.app.data.local.dao.UserDao
 import com.wildtrail.app.data.local.dao.UserFollowDao
@@ -19,6 +20,7 @@ import com.wildtrail.app.data.local.entity.EmergencyContactEntity
 import com.wildtrail.app.data.local.entity.FollowedTrailEntity
 import com.wildtrail.app.data.local.entity.HikeCommentEntity
 import com.wildtrail.app.data.local.entity.HikeLogEntity
+import com.wildtrail.app.data.local.entity.LikeEntity
 import com.wildtrail.app.data.local.entity.TrailReviewEntity
 import com.wildtrail.app.data.local.entity.UserAchievementEntity
 import com.wildtrail.app.data.local.entity.UserEntity
@@ -33,7 +35,8 @@ import com.wildtrail.app.data.local.entity.UserFollowEntity
  *
  * IMPORTANT: bump [VERSION] every time you change any entity, and add a
  * Migration object in the [Migrations] file. For the assignment we ship at
- * v1 — no migrations needed yet.
+ * v2 — we use destructive fallback so any schema change wipes the local
+ * cache (Firestore reseeds on next launch).
  */
 @Database(
     version = WildTrailDatabase.VERSION,
@@ -48,6 +51,7 @@ import com.wildtrail.app.data.local.entity.UserFollowEntity
         AchievementDefinitionEntity::class,
         UserAchievementEntity::class,
         EmergencyContactEntity::class,
+        LikeEntity::class,
     ],
 )
 @TypeConverters(Converters::class)
@@ -61,9 +65,10 @@ abstract class WildTrailDatabase : RoomDatabase() {
     abstract fun hikeCommentDao(): HikeCommentDao
     abstract fun achievementDao(): AchievementDao
     abstract fun emergencyContactDao(): EmergencyContactDao
+    abstract fun likeDao(): LikeDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 3
         private const val DB_NAME = "wildtrail.db"
 
         @Volatile

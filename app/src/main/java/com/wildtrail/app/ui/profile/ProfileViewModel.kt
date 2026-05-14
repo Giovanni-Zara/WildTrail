@@ -28,11 +28,14 @@ data class ProfileUiState(
     val user: User? = null,
     val hikes: List<HikeLog> = emptyList(),
     val earnedAchievements: List<AchievementDefinition> = emptyList(),
+    val likedHikeIds: Set<String> = emptySet(),
+    val currentUserUid: String? = null,
     val isMe: Boolean = true,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModel(
+    private val targetUid: String?,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val hikeLogRepository: HikeLogRepository,
@@ -40,28 +43,36 @@ class ProfileViewModel(
 ) : ViewModel() {
 
     init {
-        // Pull definitions once on first construction.
         viewModelScope.launch { runCatching { achievementRepository.syncDefinitions() } }
     }
 
-    val uiState: StateFlow<ProfileUiState> = authRepository.authState
-        .flatMapLatest { auth ->
-            val uid = (auth as? AuthState.SignedIn)?.user?.firebaseUid
-            if (uid == null) {
-                flowOf(ProfileUiState())
-            } else {
-                combine(
-                    userRepository.observeUser(uid),
-                    hikeLogRepository.observeMyHikes(uid),
-                    achievementRepository.observeEarned(uid),
-                ) { user, hikes, achievements ->
-                    ProfileUiState(
-                        user = user,
-                        hikes = hikes,
-                        earnedAchievements = achievements,
-                        isMe = true,
-                    )
-                }
+    private val currentUidFlow = authRepository.authState
+        .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
+
+    private val uidFlow = if (targetUid != null) flowOf(targetUid) else currentUidFlow
+
+    private val likedHikeIds = currentUidFlow.flatMapLatest { uid ->
+        if (uid == null) flowOf(emptySet()) else hikeLogRepository.observeMyLikedHikeIds(uid)
+    }
+
+    val uiState: StateFlow<ProfileUiState> = uidFlow
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(ProfileUiState())
+            else combine(
+                userRepository.observeUser(uid),
+                hikeLogRepository.observeMyHikes(uid),
+                achievementRepository.observeEarned(uid),
+                currentUidFlow,
+                likedHikeIds,
+            ) { user, hikes, achievements, meUid, liked ->
+                ProfileUiState(
+                    user = user,
+                    hikes = hikes,
+                    earnedAchievements = achievements,
+                    likedHikeIds = liked,
+                    currentUserUid = meUid,
+                    isMe = meUid != null && meUid == uid,
+                )
             }
         }
         .stateIn(
@@ -72,22 +83,34 @@ class ProfileViewModel(
 
     fun signOut() = authRepository.signOut()
 
-    fun updateProfile(bio: String?, country: String?, age: Int?) {
+    suspend fun refresh() {
+        runCatching { hikeLogRepository.refresh() }
+    }
+
+    fun toggleLike(hike: HikeLog) {
+        val uid = uiState.value.currentUserUid ?: return
+        viewModelScope.launch {
+            runCatching {
+                hikeLogRepository.setLiked(uid, hike.hikeId, hike.hikeId !in uiState.value.likedHikeIds)
+            }
+        }
+    }
+
+    fun updateProfile(bio: String?, country: String?) {
         val current = uiState.value.user ?: return
         viewModelScope.launch {
             runCatching {
-                userRepository.updateUser(
-                    current.copy(bio = bio, country = country, age = age),
-                )
+                userRepository.updateUser(current.copy(bio = bio, country = country))
             }
         }
     }
 
     companion object {
-        fun factory(): ViewModelProvider.Factory = viewModelFactory {
+        fun factory(targetUid: String? = null): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as WildTrailApp)
                 ProfileViewModel(
+                    targetUid = targetUid,
                     authRepository = app.container.authRepository,
                     userRepository = app.container.userRepository,
                     hikeLogRepository = app.container.hikeLogRepository,

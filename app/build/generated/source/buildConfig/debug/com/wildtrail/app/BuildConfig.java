@@ -9,4 +9,6 @@ public final class BuildConfig {
   public static final String BUILD_TYPE = "debug";
   public static final int VERSION_CODE = 1;
   public static final String VERSION_NAME = "1.0";
+  // Field from default config.
+  public static final String GOOGLE_WEB_CLIENT_ID = "460981604806-pvb4moio7q55ir3du5eo0pmpe4qdvkq2.apps.googleusercontent.com";
 }

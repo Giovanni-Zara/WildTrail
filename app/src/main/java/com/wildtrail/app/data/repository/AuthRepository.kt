@@ -8,6 +8,7 @@ import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,20 +96,34 @@ open class AuthRepository(
         user
     }
 
-    open suspend fun signUp(email: String, password: String, username: String): Result<User> = runCatching {
+    /**
+     * Sign-up now collects the demographic profile in one go: sex / DOB /
+     * country are mandatory, bio + profile picture are optional.
+     */
+    open suspend fun signUp(
+        email: String,
+        password: String,
+        username: String,
+        sex: Sex,
+        dateOfBirth: Long,
+        country: String,
+        bio: String? = null,
+        profilePictureUrl: String? = null,
+    ): Result<User> = runCatching {
         val fbUser = authService.signUp(email, password)
         val now = System.currentTimeMillis()
         val user = User(
             firebaseUid = fbUser.uid,
             username = username,
-            age = null,
-            country = null,
+            sex = sex,
+            dateOfBirth = dateOfBirth,
+            country = country,
             level = 1,
             xpPoints = 0,
             totalDistanceKm = 0f,
             totalHikesCount = 0,
-            profilePictureUrl = null,
-            bio = null,
+            profilePictureUrl = profilePictureUrl,
+            bio = bio,
             createdAt = now,
             lastActive = now,
             isPublic = true,
@@ -123,6 +138,47 @@ open class AuthRepository(
 
     open fun signOut() = authService.signOut()
 
+    /**
+     * Sign in with a Google ID token. We treat it as either a sign-in (the
+     * Firebase UID already has a user doc) or an automatic first-time
+     * sign-up (we create a minimal user doc).
+     */
+    open suspend fun signInWithGoogleIdToken(idToken: String): Result<User> = runCatching {
+        val fbUser = authService.signInWithGoogleIdToken(idToken)
+        val remote = runCatching { firestore.getUser(fbUser.uid)?.toDomain() }.getOrNull()
+        val user = if (remote != null) {
+            remote
+        } else {
+            // First time this Google account hits our app — provision a
+            // minimal profile. The user can fill in sex / DOB / country
+            // later from the profile screen.
+            val now = System.currentTimeMillis()
+            val fresh = User(
+                firebaseUid = fbUser.uid,
+                username = fbUser.displayName?.takeIf { it.isNotBlank() }
+                    ?: fbUser.email?.substringBefore("@")
+                    ?: "hiker",
+                sex = null,
+                dateOfBirth = null,
+                country = null,
+                level = 1,
+                xpPoints = 0,
+                totalDistanceKm = 0f,
+                totalHikesCount = 0,
+                profilePictureUrl = fbUser.photoUrl?.toString(),
+                bio = null,
+                createdAt = now,
+                lastActive = now,
+                isPublic = true,
+            )
+            runCatching { firestore.upsertUser(fresh.toDto()) }
+                .onFailure { Log.w(TAG, "Firestore profile sync skipped on Google sign-in", it) }
+            fresh
+        }
+        userDao.upsert(user.toEntity())
+        user
+    }
+
     /** Local cache observer — useful for screens that need the latest user. */
     open fun observeUser(uid: String) = userDao.observeById(uid).map { it?.toDomain() }
 
@@ -132,7 +188,8 @@ open class AuthRepository(
         return User(
             firebaseUid = uid,
             username = email?.substringBefore("@") ?: "hiker",
-            age = null,
+            sex = null,
+            dateOfBirth = null,
             country = null,
             level = 1,
             xpPoints = 0,

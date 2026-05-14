@@ -2,6 +2,7 @@ package com.wildtrail.app.data.remote
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -45,4 +46,12 @@ open class FirebaseAuthService(
     }
 
     open fun signOut() = auth.signOut()
+
+    /** Exchanges a Google ID token (from Credential Manager) for a Firebase
+     *  user. Caller is responsible for actually obtaining the token. */
+    open suspend fun signInWithGoogleIdToken(idToken: String): FirebaseUser {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val result = auth.signInWithCredential(credential).await()
+        return result.user ?: error("Firebase returned a null user after Google sign-in")
+    }
 }

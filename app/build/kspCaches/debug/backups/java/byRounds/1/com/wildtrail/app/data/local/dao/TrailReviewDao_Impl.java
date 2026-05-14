@@ -16,6 +16,7 @@ import com.wildtrail.app.data.local.entity.TrailReviewEntity;
 import java.lang.Class;
 import java.lang.Double;
 import java.lang.Exception;
+import java.lang.Integer;
 import java.lang.Object;
 import java.lang.Override;
 import java.lang.String;
@@ -44,7 +45,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `trail_reviews` (`reviewId`,`reviewerUid`,`hikeId`,`fatigueLevel`,`pathClarity`,`difficultyLevel`,`mudRisk`,`animalEncounterRisk`,`waterAvailability`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `trail_reviews` (`reviewId`,`reviewerUid`,`hikeId`,`overallRating`,`fatigueLevel`,`pathClarity`,`difficultyLevel`,`mudRisk`,`animalEncounterRisk`,`waterAvailability`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -53,14 +54,15 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
         statement.bindString(1, entity.getReviewId());
         statement.bindString(2, entity.getReviewerUid());
         statement.bindString(3, entity.getHikeId());
-        statement.bindLong(4, entity.getFatigueLevel());
-        statement.bindLong(5, entity.getPathClarity());
-        statement.bindLong(6, entity.getDifficultyLevel());
-        statement.bindLong(7, entity.getMudRisk());
-        statement.bindLong(8, entity.getAnimalEncounterRisk());
+        statement.bindLong(4, entity.getOverallRating());
+        statement.bindLong(5, entity.getFatigueLevel());
+        statement.bindLong(6, entity.getPathClarity());
+        statement.bindLong(7, entity.getDifficultyLevel());
+        statement.bindLong(8, entity.getMudRisk());
+        statement.bindLong(9, entity.getAnimalEncounterRisk());
         final int _tmp = entity.getWaterAvailability() ? 1 : 0;
-        statement.bindLong(9, _tmp);
-        statement.bindLong(10, entity.getCreatedAt());
+        statement.bindLong(10, _tmp);
+        statement.bindLong(11, entity.getCreatedAt());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -132,6 +134,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
           final int _cursorIndexOfReviewId = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewId");
           final int _cursorIndexOfReviewerUid = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewerUid");
           final int _cursorIndexOfHikeId = CursorUtil.getColumnIndexOrThrow(_cursor, "hikeId");
+          final int _cursorIndexOfOverallRating = CursorUtil.getColumnIndexOrThrow(_cursor, "overallRating");
           final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
           final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
           final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
@@ -148,6 +151,8 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
             _tmpReviewerUid = _cursor.getString(_cursorIndexOfReviewerUid);
             final String _tmpHikeId;
             _tmpHikeId = _cursor.getString(_cursorIndexOfHikeId);
+            final int _tmpOverallRating;
+            _tmpOverallRating = _cursor.getInt(_cursorIndexOfOverallRating);
             final int _tmpFatigueLevel;
             _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
             final int _tmpPathClarity;
@@ -164,7 +169,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
             _tmpWaterAvailability = _tmp != 0;
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _item = new TrailReviewEntity(_tmpReviewId,_tmpReviewerUid,_tmpHikeId,_tmpFatigueLevel,_tmpPathClarity,_tmpDifficultyLevel,_tmpMudRisk,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpCreatedAt);
+            _item = new TrailReviewEntity(_tmpReviewId,_tmpReviewerUid,_tmpHikeId,_tmpOverallRating,_tmpFatigueLevel,_tmpPathClarity,_tmpDifficultyLevel,_tmpMudRisk,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpCreatedAt);
             _result.add(_item);
           }
           return _result;
@@ -199,6 +204,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
           final int _cursorIndexOfReviewId = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewId");
           final int _cursorIndexOfReviewerUid = CursorUtil.getColumnIndexOrThrow(_cursor, "reviewerUid");
           final int _cursorIndexOfHikeId = CursorUtil.getColumnIndexOrThrow(_cursor, "hikeId");
+          final int _cursorIndexOfOverallRating = CursorUtil.getColumnIndexOrThrow(_cursor, "overallRating");
           final int _cursorIndexOfFatigueLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "fatigueLevel");
           final int _cursorIndexOfPathClarity = CursorUtil.getColumnIndexOrThrow(_cursor, "pathClarity");
           final int _cursorIndexOfDifficultyLevel = CursorUtil.getColumnIndexOrThrow(_cursor, "difficultyLevel");
@@ -214,6 +220,8 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
             _tmpReviewerUid = _cursor.getString(_cursorIndexOfReviewerUid);
             final String _tmpHikeId;
             _tmpHikeId = _cursor.getString(_cursorIndexOfHikeId);
+            final int _tmpOverallRating;
+            _tmpOverallRating = _cursor.getInt(_cursorIndexOfOverallRating);
             final int _tmpFatigueLevel;
             _tmpFatigueLevel = _cursor.getInt(_cursorIndexOfFatigueLevel);
             final int _tmpPathClarity;
@@ -230,7 +238,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
             _tmpWaterAvailability = _tmp != 0;
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
-            _result = new TrailReviewEntity(_tmpReviewId,_tmpReviewerUid,_tmpHikeId,_tmpFatigueLevel,_tmpPathClarity,_tmpDifficultyLevel,_tmpMudRisk,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpCreatedAt);
+            _result = new TrailReviewEntity(_tmpReviewId,_tmpReviewerUid,_tmpHikeId,_tmpOverallRating,_tmpFatigueLevel,_tmpPathClarity,_tmpDifficultyLevel,_tmpMudRisk,_tmpAnimalEncounterRisk,_tmpWaterAvailability,_tmpCreatedAt);
           } else {
             _result = null;
           }
@@ -245,9 +253,7 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
 
   @Override
   public Flow<Double> observeAvgDifficulty(final String hikeId) {
-    final String _sql = "\n"
-            + "        SELECT AVG(difficultyLevel) FROM trail_reviews WHERE hikeId = ?\n"
-            + "        ";
+    final String _sql = "SELECT AVG(difficultyLevel) FROM trail_reviews WHERE hikeId = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
     _statement.bindString(_argIndex, hikeId);
@@ -280,6 +286,71 @@ public final class TrailReviewDao_Impl implements TrailReviewDao {
         _statement.release();
       }
     });
+  }
+
+  @Override
+  public Object getAvgOverallRating(final String hikeId,
+      final Continuation<? super Double> $completion) {
+    final String _sql = "SELECT AVG(overallRating) FROM trail_reviews WHERE hikeId = ?";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, hikeId);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Double>() {
+      @Override
+      @Nullable
+      public Double call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final Double _result;
+          if (_cursor.moveToFirst()) {
+            final Double _tmp;
+            if (_cursor.isNull(0)) {
+              _tmp = null;
+            } else {
+              _tmp = _cursor.getDouble(0);
+            }
+            _result = _tmp;
+          } else {
+            _result = null;
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object getCount(final String hikeId, final Continuation<? super Integer> $completion) {
+    final String _sql = "SELECT COUNT(*) FROM trail_reviews WHERE hikeId = ?";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, hikeId);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Integer>() {
+      @Override
+      @NonNull
+      public Integer call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final Integer _result;
+          if (_cursor.moveToFirst()) {
+            final int _tmp;
+            _tmp = _cursor.getInt(0);
+            _result = _tmp;
+          } else {
+            _result = 0;
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
   }
 
   @NonNull
