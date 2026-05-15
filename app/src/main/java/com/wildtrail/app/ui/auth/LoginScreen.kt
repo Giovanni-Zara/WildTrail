@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.wildtrail.app.BuildConfig
+import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.ui.theme.WildTrailTheme
 import com.wildtrail.app.util.Countries
@@ -87,6 +88,7 @@ fun LoginRoute(
         onDateOfBirthChange = viewModel::onDateOfBirthChanged,
         onCountryChange = viewModel::onCountryChanged,
         onBioChange = viewModel::onBioChanged,
+        onEmergencyContactChange = viewModel::onEmergencyContactChanged,
         onProfilePictureChange = viewModel::onProfilePictureChanged,
         onToggleMode = viewModel::toggleMode,
         onSubmit = viewModel::submit,
@@ -109,6 +111,7 @@ fun LoginContent(
     onDateOfBirthChange: (Long) -> Unit,
     onCountryChange: (String) -> Unit,
     onBioChange: (String) -> Unit,
+    onEmergencyContactChange: (String) -> Unit,
     onProfilePictureChange: (String) -> Unit,
     onToggleMode: () -> Unit,
     onSubmit: () -> Unit,
@@ -188,6 +191,19 @@ fun LoginContent(
                     label = { Text("Short bio (optional)") },
                     minLines = 2,
                     maxLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = state.emergencyContactNumber,
+                    onValueChange = onEmergencyContactChange,
+                    label = { Text("Emergency contact number (optional)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true,
+                    supportingText = {
+                        Text("If left blank, the default $DEFAULT_EMERGENCY_NUMBER will be used.")
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
@@ -507,6 +523,7 @@ private fun LoginPreview() {
             onDateOfBirthChange = {},
             onCountryChange = {},
             onBioChange = {},
+            onEmergencyContactChange = {},
             onProfilePictureChange = {},
             onToggleMode = {},
             onSubmit = {},

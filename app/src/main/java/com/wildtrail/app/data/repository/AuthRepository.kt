@@ -8,6 +8,7 @@ import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
+import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.CoroutineScope
@@ -109,6 +110,7 @@ open class AuthRepository(
         country: String,
         bio: String? = null,
         profilePictureUrl: String? = null,
+        emergencyContactNumber: String? = null,
     ): Result<User> = runCatching {
         val fbUser = authService.signUp(email, password)
         val now = System.currentTimeMillis()
@@ -124,6 +126,8 @@ open class AuthRepository(
             totalHikesCount = 0,
             profilePictureUrl = profilePictureUrl,
             bio = bio,
+            emergencyContactNumber = emergencyContactNumber?.takeIf { it.isNotBlank() }
+                ?: DEFAULT_EMERGENCY_NUMBER,
             createdAt = now,
             lastActive = now,
             isPublic = true,
@@ -137,6 +141,21 @@ open class AuthRepository(
     }
 
     open fun signOut() = authService.signOut()
+
+    /** The signed-in account's email (used to prefill the settings screen). */
+    open fun currentEmail(): String? = authService.currentEmail
+
+    /** Change the account password. Failure (e.g. stale login) is returned,
+     *  never thrown, so the UI can show a friendly message. */
+    open suspend fun changePassword(newPassword: String): Result<Unit> = runCatching {
+        authService.updatePassword(newPassword)
+    }
+
+    /** Begin an email change — Firebase emails a verification link to the new
+     *  address and only switches it once the user confirms. */
+    open suspend fun changeEmail(newEmail: String): Result<Unit> = runCatching {
+        authService.sendEmailChangeVerification(newEmail)
+    }
 
     /**
      * Sign in with a Google ID token. We treat it as either a sign-in (the
@@ -167,6 +186,7 @@ open class AuthRepository(
                 totalHikesCount = 0,
                 profilePictureUrl = fbUser.photoUrl?.toString(),
                 bio = null,
+                emergencyContactNumber = DEFAULT_EMERGENCY_NUMBER,
                 createdAt = now,
                 lastActive = now,
                 isPublic = true,
@@ -197,6 +217,7 @@ open class AuthRepository(
             totalHikesCount = 0,
             profilePictureUrl = null,
             bio = null,
+            emergencyContactNumber = DEFAULT_EMERGENCY_NUMBER,
             createdAt = now,
             lastActive = now,
             isPublic = true,

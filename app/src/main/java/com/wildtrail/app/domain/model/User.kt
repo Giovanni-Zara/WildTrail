@@ -22,9 +22,18 @@ data class User(
     val totalHikesCount: Int,
     val profilePictureUrl: String?,
     val bio: String?,
+    /**
+     * Phone number dialled in an emergency. Optional at sign-up: if the user
+     * leaves it blank we fall back to [DEFAULT_EMERGENCY_NUMBER] so there is
+     * always *some* number on file to show / dial.
+     */
+    val emergencyContactNumber: String,
     val createdAt: Long,
     val lastActive: Long,
     val isPublic: Boolean,
 )
+
+/** Default emergency number used when the user doesn't provide their own. */
+const val DEFAULT_EMERGENCY_NUMBER: String = "9999999"
 
 enum class Sex { MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY }

@@ -265,25 +265,34 @@ private fun SaveHikeDialog(
     var animal by remember { mutableStateOf(3) }
     var water by remember { mutableStateOf(false) }
 
+    // Every field except the description is mandatory. The rating chips,
+    // surface type and switches always carry a value, so the only field
+    // that can actually be left empty is the title — guard the Save button
+    // on it and surface an inline error.
+    val isFormValid = title.isNotBlank()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            Button(onClick = {
-                onConfirm(
-                    SaveHikeRequest(
-                        title = title,
-                        description = description.takeIf { it.isNotBlank() },
-                        surfaceType = surface,
-                        isPrivate = isPrivate,
-                        difficultyLevel = difficulty,
-                        mudRisk = mud,
-                        pathClarity = clarity,
-                        fatigueLevel = fatigue,
-                        animalEncounterRisk = animal,
-                        waterAvailability = water,
-                    ),
-                )
-            }) { Text("Save") }
+            Button(
+                enabled = isFormValid,
+                onClick = {
+                    onConfirm(
+                        SaveHikeRequest(
+                            title = title.trim(),
+                            description = description.takeIf { it.isNotBlank() },
+                            surfaceType = surface,
+                            isPrivate = isPrivate,
+                            difficultyLevel = difficulty,
+                            mudRisk = mud,
+                            pathClarity = clarity,
+                            fatigueLevel = fatigue,
+                            animalEncounterRisk = animal,
+                            waterAvailability = water,
+                        ),
+                    )
+                },
+            ) { Text("Save") }
         },
         dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Discard") } },
         title = { Text("Save hike (${"%.2f".format(distanceKm)} km)") },
@@ -295,8 +304,12 @@ private fun SaveHikeDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text("Title *") },
                     singleLine = true,
+                    isError = title.isBlank(),
+                    supportingText = {
+                        if (title.isBlank()) Text("Title is required")
+                    },
                 )
                 OutlinedTextField(
                     value = description,
@@ -304,7 +317,7 @@ private fun SaveHikeDialog(
                     label = { Text("Description (optional)") },
                 )
 
-                Text("Surface type", style = MaterialTheme.typography.labelLarge)
+                Text("Surface type *", style = MaterialTheme.typography.labelLarge)
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),

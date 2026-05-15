@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.wildtrail.app.domain.model.AchievementDefinition
+import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
 import com.wildtrail.app.ui.components.HikeCard
@@ -56,6 +58,7 @@ fun ProfileRoute(
     onBack: (() -> Unit)? = null,
     onHikeClick: (String) -> Unit,
     onUserClick: (String) -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
     viewModel: ProfileViewModel = viewModel(
         key = "profile/${targetUid ?: "me"}",
         factory = ProfileViewModel.factory(targetUid),
@@ -70,6 +73,7 @@ fun ProfileRoute(
         onSignOut = viewModel::signOut,
         onRefresh = { viewModel.refresh() },
         onToggleLike = viewModel::toggleLike,
+        onOpenSettings = onOpenSettings,
     )
 }
 
@@ -83,6 +87,7 @@ fun ProfileContent(
     onSignOut: () -> Unit,
     onRefresh: suspend () -> Unit,
     onToggleLike: (HikeLog) -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     var refreshing by remember { mutableStateOf(false) }
     LaunchedEffect(refreshing) {
@@ -105,6 +110,11 @@ fun ProfileContent(
                 },
                 actions = {
                     if (state.isMe) {
+                        if (onOpenSettings != null) {
+                            IconButton(onClick = onOpenSettings) {
+                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                            }
+                        }
                         IconButton(onClick = onSignOut) {
                             Icon(Icons.Filled.Logout, contentDescription = "Sign out")
                         }
@@ -217,6 +227,18 @@ private fun ProfileHeader(user: User) {
                 Spacer(Modifier.height(4.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall)
             }
+            val number = user.emergencyContactNumber.ifBlank { DEFAULT_EMERGENCY_NUMBER }
+            val isDefault = number == DEFAULT_EMERGENCY_NUMBER
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (isDefault) {
+                    "Emergency contact: $number (default)"
+                } else {
+                    "Emergency contact: $number"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

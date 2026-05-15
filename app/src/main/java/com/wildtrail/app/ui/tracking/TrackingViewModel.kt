@@ -135,7 +135,7 @@ class TrackingViewModel(
             creatorUsername = auth.user.username,
             creatorProfilePictureUrl = auth.user.profilePictureUrl,
             workoutId = null,
-            title = title.ifBlank { "My hike" },
+            title = title,
             description = description,
             avgSpeedKmh = state.avgSpeedKmh,
             stepCount = 0,

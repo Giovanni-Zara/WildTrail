@@ -68,7 +68,7 @@ abstract class WildTrailDatabase : RoomDatabase() {
     abstract fun likeDao(): LikeDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
         private const val DB_NAME = "wildtrail.db"
 
         @Volatile

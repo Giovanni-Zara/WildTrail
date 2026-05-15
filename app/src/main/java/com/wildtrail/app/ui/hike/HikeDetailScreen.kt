@@ -55,6 +55,7 @@ import com.wildtrail.app.domain.model.User
 import com.wildtrail.app.ui.components.EditableStarRow
 import com.wildtrail.app.ui.components.RatingRow
 import com.wildtrail.app.ui.components.StarRow
+import com.wildtrail.app.util.formatHikeDate
 import kotlinx.coroutines.launch
 
 @Composable
@@ -355,6 +356,11 @@ private fun HikeStatsCard(hike: HikeLog) {
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Text(
+                "Recorded on ${formatHikeDate(hike.endedAt)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             hike.description?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }

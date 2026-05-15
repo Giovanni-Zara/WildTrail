@@ -49,6 +49,7 @@ class WildTrailDatabaseTest {
             totalHikesCount = 3,
             profilePictureUrl = null,
             bio = null,
+            emergencyContactNumber = "9999999",
             createdAt = 1L,
             lastActive = 2L,
             isPublic = true,
@@ -107,6 +108,7 @@ class WildTrailDatabaseTest {
         firebaseUid = "uid-1", username = "g", sex = null, dateOfBirth = null,
         country = null, level = 1, xpPoints = 0, totalDistanceKm = 0f,
         totalHikesCount = 0, profilePictureUrl = null, bio = null,
+        emergencyContactNumber = "9999999",
         createdAt = 0L, lastActive = 0L, isPublic = true,
     )
 
