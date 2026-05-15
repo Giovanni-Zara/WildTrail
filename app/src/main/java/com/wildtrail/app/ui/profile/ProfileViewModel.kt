@@ -42,12 +42,33 @@ class ProfileViewModel(
     private val achievementRepository: AchievementRepository,
 ) : ViewModel() {
 
-    init {
-        viewModelScope.launch { runCatching { achievementRepository.syncDefinitions() } }
-    }
-
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
+
+    init {
+        viewModelScope.launch {
+            runCatching { achievementRepository.syncDefinitions() }
+            // Reconcile the signed-in user's achievements whenever their
+            // profile (their own) is on screen, so the count stays correct.
+            currentUidFlow
+                .flatMapLatest { uid ->
+                    if (uid == null) {
+                        flowOf(null)
+                    } else {
+                        combine(
+                            userRepository.observeUser(uid),
+                            hikeLogRepository.observeMyHikes(uid),
+                        ) { user, hikes -> user to hikes }
+                    }
+                }
+                .collect { pair ->
+                    val user = pair?.first ?: return@collect
+                    runCatching {
+                        achievementRepository.evaluateAndAward(user, pair.second)
+                    }
+                }
+        }
+    }
 
     private val uidFlow = if (targetUid != null) flowOf(targetUid) else currentUidFlow
 

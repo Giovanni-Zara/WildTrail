@@ -21,8 +21,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** Sort orders offered by the chips under the Explore search bar. */
+enum class SortOption(val label: String) {
+    RECENT("Most recent"),
+    MOST_LIKED("Most liked"),
+    TOP_RATED("Top rated"),
+    LONGEST("Longest"),
+}
+
 data class ExploreUiState(
     val query: String = "",
+    val sort: SortOption = SortOption.RECENT,
     val results: List<HikeLog> = emptyList(),
     val featured: List<HikeLog> = emptyList(),
     val likedHikeIds: Set<String> = emptySet(),
@@ -36,6 +45,7 @@ class ExploreViewModel(
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
+    private val sort = MutableStateFlow(SortOption.RECENT)
     private val results = MutableStateFlow<List<HikeLog>>(emptyList())
 
     private val currentUidFlow = authRepository.authState
@@ -45,17 +55,21 @@ class ExploreViewModel(
         if (uid == null) flowOf(emptySet()) else hikeLogRepository.observeMyLikedHikeIds(uid)
     }
 
+    // query + sort merged so the whole combine stays at 5 typed sources.
+    private val controls = combine(query, sort) { q, s -> q to s }
+
     val uiState: StateFlow<ExploreUiState> = combine(
-        query,
+        controls,
         results,
         hikeLogRepository.observePublicFeed(20),
         likedHikeIds,
         currentUidFlow,
-    ) { q, r, featured, liked, uid ->
+    ) { (q, s), r, featured, liked, uid ->
         ExploreUiState(
             query = q,
-            results = r,
-            featured = featured,
+            sort = s,
+            results = sortHikes(r, s),
+            featured = sortHikes(featured, s),
             likedHikeIds = liked,
             currentUserUid = uid,
         )
@@ -74,6 +88,19 @@ class ExploreViewModel(
         viewModelScope.launch {
             results.value = hikeLogRepository.search(q)
         }
+    }
+
+    fun onSortChanged(option: SortOption) {
+        sort.value = option
+    }
+
+    private fun sortHikes(list: List<HikeLog>, sort: SortOption): List<HikeLog> = when (sort) {
+        SortOption.RECENT -> list.sortedByDescending { it.endedAt }
+        SortOption.MOST_LIKED -> list.sortedByDescending { it.likesCount }
+        SortOption.TOP_RATED -> list.sortedWith(
+            compareByDescending<HikeLog> { it.averageRating }.thenByDescending { it.reviewCount },
+        )
+        SortOption.LONGEST -> list.sortedByDescending { it.lengthKm }
     }
 
     suspend fun refresh() {

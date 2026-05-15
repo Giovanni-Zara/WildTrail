@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +29,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -59,6 +61,8 @@ fun ProfileRoute(
     onHikeClick: (String) -> Unit,
     onUserClick: (String) -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenLiked: (() -> Unit)? = null,
+    onOpenAchievements: (() -> Unit)? = null,
     viewModel: ProfileViewModel = viewModel(
         key = "profile/${targetUid ?: "me"}",
         factory = ProfileViewModel.factory(targetUid),
@@ -74,6 +78,8 @@ fun ProfileRoute(
         onRefresh = { viewModel.refresh() },
         onToggleLike = viewModel::toggleLike,
         onOpenSettings = onOpenSettings,
+        onOpenLiked = onOpenLiked,
+        onOpenAchievements = onOpenAchievements,
     )
 }
 
@@ -88,6 +94,8 @@ fun ProfileContent(
     onRefresh: suspend () -> Unit,
     onToggleLike: (HikeLog) -> Unit,
     onOpenSettings: (() -> Unit)? = null,
+    onOpenLiked: (() -> Unit)? = null,
+    onOpenAchievements: (() -> Unit)? = null,
 ) {
     var refreshing by remember { mutableStateOf(false) }
     LaunchedEffect(refreshing) {
@@ -110,6 +118,19 @@ fun ProfileContent(
                 },
                 actions = {
                     if (state.isMe) {
+                        if (onOpenLiked != null) {
+                            IconButton(onClick = onOpenLiked) {
+                                Icon(Icons.Filled.Public, contentDescription = "Liked hikes")
+                            }
+                        }
+                        if (onOpenAchievements != null) {
+                            IconButton(onClick = onOpenAchievements) {
+                                Icon(
+                                    Icons.Filled.EmojiEvents,
+                                    contentDescription = "Achievements",
+                                )
+                            }
+                        }
                         if (onOpenSettings != null) {
                             IconButton(onClick = onOpenSettings) {
                                 Icon(Icons.Filled.Settings, contentDescription = "Settings")
@@ -135,10 +156,26 @@ fun ProfileContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item { state.user?.let { ProfileHeader(it) } }
-                item { state.user?.let { LevelProgressCard(it) } }
+                item {
+                    state.user?.let {
+                        LevelProgressCard(it, state.earnedAchievements.size)
+                    }
+                }
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Text("Achievements", style = MaterialTheme.typography.titleLarge)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            "Recent Achievements",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (onOpenAchievements != null) {
+                            TextButton(onClick = onOpenAchievements) { Text("See all") }
+                        }
+                    }
                 }
                 if (state.earnedAchievements.isEmpty()) {
                     item {
@@ -148,7 +185,12 @@ fun ProfileContent(
                         )
                     }
                 } else {
-                    items(state.earnedAchievements, key = { it.achievementId }) { achievement ->
+                    // earnedAchievements is ordered most-recent-first by the
+                    // DAO, so take(2) = the last two unlocked.
+                    items(
+                        state.earnedAchievements.take(2),
+                        key = { it.achievementId },
+                    ) { achievement ->
                         AchievementRow(achievement)
                     }
                 }
@@ -244,7 +286,7 @@ private fun ProfileHeader(user: User) {
 }
 
 @Composable
-private fun LevelProgressCard(user: User) {
+private fun LevelProgressCard(user: User, achievementsCount: Int) {
     val level = LevelMath.levelForXp(user.xpPoints)
     val current = LevelMath.xpInCurrentLevel(user.xpPoints)
     val needed = LevelMath.xpForNextLevel(level)
@@ -282,7 +324,7 @@ private fun LevelProgressCard(user: User) {
             ) {
                 StatBlock("Hikes", user.totalHikesCount.toString())
                 StatBlock("Distance", "%.1f km".format(user.totalDistanceKm))
-                StatBlock("Achievements", user.level.toString())
+                StatBlock("Achievements", achievementsCount.toString())
             }
         }
     }
