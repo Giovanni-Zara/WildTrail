@@ -76,12 +76,41 @@ class HikeLogRepository(
     fun observeHike(id: String): Flow<HikeLog?> =
         hikeLogDao.observeById(id).map { it?.toDomain() }
 
+    /** Hikes the signed-in user has liked (newest like first). */
+    fun observeLikedHikes(uid: String): Flow<List<HikeLog>> =
+        hikeLogDao.observeLikedHikes(uid).map { list -> list.map { it.toDomain() } }
+
     suspend fun saveHike(hike: HikeLog) {
         // Mirror locally first so the user sees their save instantly even
         // on a flaky network. Push to Firestore best-effort.
         hikeLogDao.upsert(hike.toEntity())
         runCatching { firestore.upsertHike(hike.toDto()) }
             .onFailure { Log.w(TAG, "Firestore hike save skipped", it) }
+    }
+
+    /**
+     * Re-denormalise the creator's display info onto every hike they've
+     * created. Called after the user edits their profile so a username /
+     * profile-picture change is reflected on all their existing hike cards
+     * (Home / Explore / Profile) instead of staying frozen at save time.
+     *
+     * Only rows that actually differ are rewritten, so this is a no-op when
+     * nothing changed and never fans out redundant Firestore writes.
+     */
+    suspend fun syncCreatorInfo(uid: String, username: String, profilePictureUrl: String?) {
+        hikeLogDao.getByCreator(uid).forEach { row ->
+            if (row.creatorUsername != username ||
+                row.creatorProfilePictureUrl != profilePictureUrl
+            ) {
+                val patched = row.copy(
+                    creatorUsername = username,
+                    creatorProfilePictureUrl = profilePictureUrl,
+                )
+                hikeLogDao.upsert(patched)
+                runCatching { firestore.upsertHike(patched.toDomain().toDto()) }
+                    .onFailure { Log.w(TAG, "Firestore creator-info sync skipped", it) }
+            }
+        }
     }
 
     suspend fun search(query: String): List<HikeLog> =

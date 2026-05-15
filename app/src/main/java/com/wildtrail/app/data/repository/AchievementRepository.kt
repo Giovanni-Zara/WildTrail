@@ -6,8 +6,12 @@ import com.wildtrail.app.data.local.entity.toDomain
 import com.wildtrail.app.data.local.entity.toEntity
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.toDomain
+import com.wildtrail.app.domain.model.AchievementCatalog
 import com.wildtrail.app.domain.model.AchievementDefinition
+import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.User
 import com.wildtrail.app.domain.model.UserAchievement
+import com.wildtrail.app.util.AchievementEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -16,13 +20,43 @@ class AchievementRepository(
     private val firestore: FirestoreService,
 ) {
 
-    /** Pull the static catalogue once at app start (call from a coroutine).
-     *  Wrapped: Firestore being unreachable / locked down must not crash. */
+    /**
+     * Make the catalogue available. The built-in [AchievementCatalog] is
+     * seeded *unconditionally* so the Achievements screen always has content
+     * even with no Firestore; the remote catalogue is then layered on top
+     * (best-effort) so the cloud can add/override entries later.
+     */
     suspend fun syncDefinitions() {
+        runCatching {
+            achievementDao.upsertDefinitions(AchievementCatalog.ALL.map { it.toEntity() })
+        }.onFailure { Log.w(TAG, "Built-in achievement seed skipped", it) }
         runCatching {
             val defs = firestore.fetchAchievementDefinitions().map { it.toDomain().toEntity() }
             if (defs.isNotEmpty()) achievementDao.upsertDefinitions(defs)
         }.onFailure { Log.w(TAG, "Achievement catalogue sync skipped", it) }
+    }
+
+    /**
+     * Award every catalogue achievement whose criteria the user now meets
+     * and that they haven't already earned. Idempotent: the `hasEarned`
+     * guard means re-running this (e.g. every time a screen opens) never
+     * re-awards or re-writes anything.
+     */
+    suspend fun evaluateAndAward(user: User, hikes: List<HikeLog>) {
+        AchievementCatalog.ALL.forEach { def ->
+            val metric = AchievementEngine.metricFor(def.category, user, hikes)
+            if (metric >= def.thresholdValue &&
+                !achievementDao.hasEarned(user.firebaseUid, def.achievementId)
+            ) {
+                award(
+                    UserAchievement(
+                        userUid = user.firebaseUid,
+                        achievementId = def.achievementId,
+                        earnedAt = System.currentTimeMillis(),
+                    ),
+                )
+            }
+        }
     }
 
     fun observeAll(): Flow<List<AchievementDefinition>> =

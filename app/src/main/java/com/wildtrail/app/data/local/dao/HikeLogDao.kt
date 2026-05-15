@@ -31,6 +31,21 @@ interface HikeLogDao {
     @Query("SELECT * FROM hike_logs WHERE creatorFirebaseUid = :uid")
     suspend fun getByCreator(uid: String): List<HikeLogEntity>
 
+    /**
+     * Hikes the user has liked, most-recently-liked first. We don't need a
+     * new table — the existing normalised `likes` join table already records
+     * every (user, hike) like, so we just INNER JOIN it onto `hike_logs`.
+     */
+    @Query(
+        """
+        SELECT h.* FROM hike_logs h
+         INNER JOIN likes l ON l.hikeId = h.hikeId
+         WHERE l.userUid = :uid
+         ORDER BY l.createdAt DESC
+        """,
+    )
+    fun observeLikedHikes(uid: String): Flow<List<HikeLogEntity>>
+
     /** "Explore" feed: only public hikes, most recent first. */
     @Query("SELECT * FROM hike_logs WHERE isPrivate = 0 ORDER BY endedAt DESC LIMIT :limit")
     fun observePublicFeed(limit: Int = 50): Flow<List<HikeLogEntity>>

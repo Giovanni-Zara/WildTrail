@@ -7,10 +7,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.wildtrail.app.ui.achievements.AchievementsRoute
 import com.wildtrail.app.ui.auth.LoginRoute
 import com.wildtrail.app.ui.explore.ExploreRoute
 import com.wildtrail.app.ui.hike.HikeDetailRoute
 import com.wildtrail.app.ui.home.HomeRoute
+import com.wildtrail.app.ui.liked.LikedHikesRoute
 import com.wildtrail.app.ui.profile.ProfileRoute
 import com.wildtrail.app.ui.settings.SettingsRoute
 import com.wildtrail.app.ui.tracking.TrackingRoute
@@ -69,10 +71,26 @@ fun WildTrailNavGraph(
                     onOpenSettings = {
                         navController.navigate(Destination.Settings.route)
                     },
+                    onOpenLiked = {
+                        navController.navigate(Destination.LikedHikes.route)
+                    },
+                    onOpenAchievements = {
+                        navController.navigate(Destination.Achievements.route)
+                    },
                 )
             }
             composable(Destination.Settings.route) {
                 SettingsRoute(onBack = { navController.popBackStack() })
+            }
+            composable(Destination.LikedHikes.route) {
+                LikedHikesRoute(
+                    onBack = { navController.popBackStack() },
+                    onHikeClick = openHike,
+                    onUserClick = openUser,
+                )
+            }
+            composable(Destination.Achievements.route) {
+                AchievementsRoute(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Destination.HikeDetail.route,

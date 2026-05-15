@@ -1,7 +1,9 @@
 package com.wildtrail.app.ui.explore
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,9 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,6 +46,7 @@ fun ExploreRoute(
     ExploreContent(
         state = state,
         onQueryChange = viewModel::onQueryChanged,
+        onSortChange = viewModel::onSortChanged,
         onHikeClick = onHikeClick,
         onUserClick = onUserClick,
         onRefresh = { viewModel.refresh() },
@@ -54,6 +59,7 @@ fun ExploreRoute(
 fun ExploreContent(
     state: ExploreUiState,
     onQueryChange: (String) -> Unit,
+    onSortChange: (SortOption) -> Unit,
     onHikeClick: (String) -> Unit,
     onUserClick: (String) -> Unit,
     onRefresh: suspend () -> Unit,
@@ -92,6 +98,23 @@ fun ExploreContent(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                    ) {
+                        SortOption.entries.forEach { option ->
+                            FilterChip(
+                                selected = state.sort == option,
+                                onClick = { onSortChange(option) },
+                                label = { Text(option.label) },
+                            )
+                        }
+                    }
                 }
                 val list = if (state.query.isBlank()) state.featured else state.results
                 item {

@@ -13,10 +13,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 /**
  * A label + 1..5 chip row used everywhere we collect a rating from the
@@ -50,7 +52,10 @@ fun RatingRow(
 
 /**
  * Read-only star rating row — used to render an `overallRating` (1..5).
- * If [rating] is fractional we round to the nearest integer for display.
+ *
+ * The number of filled stars is the rating *rounded to the nearest integer*
+ * so it always matches the "N / 5" text shown next to it (e.g. a 4 shows
+ * four solid stars and one outlined star, not a truncated count).
  */
 @Composable
 fun StarRow(
@@ -58,16 +63,14 @@ fun StarRow(
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 18.dp,
 ) {
-    val rounded = rating.toInt().coerceIn(0, 5)
+    val filled = rating.roundToInt().coerceIn(0, 5)
     Row(modifier = modifier) {
         repeat(5) { index ->
             Icon(
-                imageVector = if (index < rounded) Icons.Filled.Star else Icons.Outlined.Star,
+                imageVector = if (index < filled) Icons.Filled.Star else Icons.Outlined.Star,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 1.dp).then(Modifier).let {
-                    Modifier.padding(end = 1.dp)
-                },
+                modifier = Modifier.size(size).padding(end = 1.dp),
             )
         }
     }
