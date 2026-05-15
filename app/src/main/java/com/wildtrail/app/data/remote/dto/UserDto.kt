@@ -1,5 +1,6 @@
 package com.wildtrail.app.data.remote.dto
 
+import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 
@@ -25,6 +26,7 @@ data class UserDto(
     var totalHikesCount: Int = 0,
     var profilePictureUrl: String? = null,
     var bio: String? = null,
+    var emergencyContactNumber: String = DEFAULT_EMERGENCY_NUMBER,
     var createdAt: Long = 0L,
     var lastActive: Long = 0L,
     var isPublic: Boolean = true,
@@ -46,6 +48,7 @@ fun UserDto.toDomain(): User = User(
     totalHikesCount = totalHikesCount,
     profilePictureUrl = profilePictureUrl,
     bio = bio,
+    emergencyContactNumber = emergencyContactNumber.ifBlank { DEFAULT_EMERGENCY_NUMBER },
     createdAt = createdAt,
     lastActive = lastActive,
     isPublic = isPublic,
@@ -63,6 +66,7 @@ fun User.toDto(): UserDto = UserDto(
     totalHikesCount = totalHikesCount,
     profilePictureUrl = profilePictureUrl,
     bio = bio,
+    emergencyContactNumber = emergencyContactNumber.ifBlank { DEFAULT_EMERGENCY_NUMBER },
     createdAt = createdAt,
     lastActive = lastActive,
     isPublic = isPublic,

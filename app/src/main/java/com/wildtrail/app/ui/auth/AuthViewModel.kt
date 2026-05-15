@@ -33,6 +33,7 @@ data class AuthUiState(
     val dateOfBirth: Long? = null,
     val country: String = "",
     val bio: String = "",
+    val emergencyContactNumber: String = "",
     val profilePictureUri: String = "",
     val isSignUp: Boolean = false,
     val isLoading: Boolean = false,
@@ -63,6 +64,8 @@ class AuthViewModel(
     fun onDateOfBirthChanged(value: Long) = _uiState.update { it.copy(dateOfBirth = value, errorMessage = null) }
     fun onCountryChanged(value: String) = _uiState.update { it.copy(country = value, errorMessage = null) }
     fun onBioChanged(value: String) = _uiState.update { it.copy(bio = value) }
+    fun onEmergencyContactChanged(value: String) =
+        _uiState.update { it.copy(emergencyContactNumber = value, errorMessage = null) }
     fun onProfilePictureChanged(value: String) = _uiState.update { it.copy(profilePictureUri = value) }
     fun toggleMode() = _uiState.update { it.copy(isSignUp = !it.isSignUp, errorMessage = null) }
 
@@ -128,6 +131,8 @@ class AuthViewModel(
                     country = state.country.trim(),
                     bio = state.bio.trim().takeIf { it.isNotEmpty() },
                     profilePictureUrl = state.profilePictureUri.trim().takeIf { it.isNotEmpty() },
+                    emergencyContactNumber = state.emergencyContactNumber.trim()
+                        .takeIf { it.isNotEmpty() },
                 )
             } else {
                 authRepository.signIn(state.email.trim(), state.password)

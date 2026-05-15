@@ -12,6 +12,7 @@ import com.wildtrail.app.ui.explore.ExploreRoute
 import com.wildtrail.app.ui.hike.HikeDetailRoute
 import com.wildtrail.app.ui.home.HomeRoute
 import com.wildtrail.app.ui.profile.ProfileRoute
+import com.wildtrail.app.ui.settings.SettingsRoute
 import com.wildtrail.app.ui.tracking.TrackingRoute
 
 /**
@@ -65,7 +66,13 @@ fun WildTrailNavGraph(
                     onBack = null,
                     onHikeClick = openHike,
                     onUserClick = openUser,
+                    onOpenSettings = {
+                        navController.navigate(Destination.Settings.route)
+                    },
                 )
+            }
+            composable(Destination.Settings.route) {
+                SettingsRoute(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Destination.HikeDetail.route,

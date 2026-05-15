@@ -6,6 +6,7 @@ import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
+import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ fun testUser(
     totalHikesCount = 0,
     profilePictureUrl = null,
     bio = null,
+    emergencyContactNumber = DEFAULT_EMERGENCY_NUMBER,
     createdAt = 0L,
     lastActive = 0L,
     isPublic = true,
@@ -127,6 +129,7 @@ class FakeAuthRepository : AuthRepository(
         country: String,
         bio: String?,
         profilePictureUrl: String?,
+        emergencyContactNumber: String?,
     ): Result<User> {
         signUpCalls++
         nextResult.onSuccess { _authState.value = AuthState.SignedIn(it) }

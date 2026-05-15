@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
+import com.wildtrail.app.util.formatHikeDate
 
 /**
  * Stateless card for a single hike in a list. All inputs are plain Kotlin
@@ -129,8 +130,13 @@ fun HikeCard(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // ----- Title + description ---------------------------------------
+            // ----- Title + recorded date + description -----------------------
             Text(text = hike.title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Recorded ${formatHikeDate(hike.endedAt)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             hike.description?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(

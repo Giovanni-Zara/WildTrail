@@ -47,6 +47,30 @@ open class FirebaseAuthService(
 
     open fun signOut() = auth.signOut()
 
+    /** The signed-in account's email, or null if signed out. */
+    open val currentEmail: String? get() = auth.currentUser?.email
+
+    /**
+     * Updates the password of the signed-in user. Firebase requires a
+     * *recent* login for this; if the session is stale it throws
+     * `FirebaseAuthRecentLoginRequiredException`, which the caller surfaces
+     * to the user as "please sign in again".
+     */
+    open suspend fun updatePassword(newPassword: String) {
+        val user = auth.currentUser ?: error("Not signed in")
+        user.updatePassword(newPassword).await()
+    }
+
+    /**
+     * Starts an email change. Modern Firebase doesn't change the address
+     * immediately — it sends a verification link to [newEmail]; the address
+     * only switches once the user clicks it. Also needs a recent login.
+     */
+    open suspend fun sendEmailChangeVerification(newEmail: String) {
+        val user = auth.currentUser ?: error("Not signed in")
+        user.verifyBeforeUpdateEmail(newEmail).await()
+    }
+
     /** Exchanges a Google ID token (from Credential Manager) for a Firebase
      *  user. Caller is responsible for actually obtaining the token. */
     open suspend fun signInWithGoogleIdToken(idToken: String): FirebaseUser {

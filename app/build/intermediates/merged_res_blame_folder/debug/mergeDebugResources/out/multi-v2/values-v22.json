@@ -4,7 +4,7 @@
             "outputFile": "com.wildtrail.app-mergeDebugResources-89:/values-v22/values-v22.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\Giovanni\\.gradle\\caches\\8.10.2\\transforms\\5bc0e43aa0aae84474cdd9e1d6c9f121\\transformed\\appcompat-1.6.1\\res\\values-v22\\values-v22.xml",
+                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\5bc0e43aa0aae84474cdd9e1d6c9f121\\transformed\\appcompat-1.6.1\\res\\values-v22\\values-v22.xml",
                     "from": {
                         "startLines": "2,3,4,9",
                         "startColumns": "4,4,4,4",

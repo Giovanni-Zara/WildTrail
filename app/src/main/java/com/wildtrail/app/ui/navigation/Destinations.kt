@@ -33,6 +33,9 @@ sealed class Destination(val route: String) {
     data object Track : Destination("track")
     data object Profile : Destination("profile")
 
+    /** Edit-your-own-profile screen, reached via the gear icon on [Profile]. */
+    data object Settings : Destination("settings")
+
     // --- Detail screens --------------------------------------------------
     data object HikeDetail : Destination("hike_detail/{hikeId}") {
         fun create(hikeId: String) = "hike_detail/$hikeId"

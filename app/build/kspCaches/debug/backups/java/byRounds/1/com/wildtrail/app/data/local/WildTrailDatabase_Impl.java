@@ -66,10 +66,10 @@ public final class WildTrailDatabase_Impl extends WildTrailDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `users` (`firebaseUid` TEXT NOT NULL, `username` TEXT NOT NULL, `sex` TEXT, `dateOfBirth` INTEGER, `country` TEXT, `level` INTEGER NOT NULL, `xpPoints` INTEGER NOT NULL, `totalDistanceKm` REAL NOT NULL, `totalHikesCount` INTEGER NOT NULL, `profilePictureUrl` TEXT, `bio` TEXT, `createdAt` INTEGER NOT NULL, `lastActive` INTEGER NOT NULL, `isPublic` INTEGER NOT NULL, PRIMARY KEY(`firebaseUid`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `users` (`firebaseUid` TEXT NOT NULL, `username` TEXT NOT NULL, `sex` TEXT, `dateOfBirth` INTEGER, `country` TEXT, `level` INTEGER NOT NULL, `xpPoints` INTEGER NOT NULL, `totalDistanceKm` REAL NOT NULL, `totalHikesCount` INTEGER NOT NULL, `profilePictureUrl` TEXT, `bio` TEXT, `emergencyContactNumber` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `lastActive` INTEGER NOT NULL, `isPublic` INTEGER NOT NULL, PRIMARY KEY(`firebaseUid`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `hike_logs` (`hikeId` TEXT NOT NULL, `creatorFirebaseUid` TEXT NOT NULL, `creatorUsername` TEXT NOT NULL, `creatorProfilePictureUrl` TEXT, `workoutId` TEXT, `title` TEXT NOT NULL, `description` TEXT, `avgSpeedKmh` REAL NOT NULL, `stepCount` INTEGER NOT NULL, `caloriesBurned` INTEGER NOT NULL, `coverPhotoUrl` TEXT, `xpEarned` INTEGER NOT NULL, `likesCount` INTEGER NOT NULL, `surfaceType` TEXT NOT NULL, `lengthKm` REAL NOT NULL, `durationSeconds` INTEGER NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER NOT NULL, `elevationGainMeters` INTEGER NOT NULL, `routeCoordinates` TEXT NOT NULL, `isPrivate` INTEGER NOT NULL, `difficultyLevel` INTEGER NOT NULL, `mudRisk` INTEGER NOT NULL, `pathClarity` INTEGER NOT NULL, `fatigueLevel` INTEGER NOT NULL, `animalEncounterRisk` INTEGER NOT NULL, `waterAvailability` INTEGER NOT NULL, `averageRating` REAL NOT NULL, `reviewCount` INTEGER NOT NULL, PRIMARY KEY(`hikeId`))");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_hike_logs_creatorFirebaseUid` ON `hike_logs` (`creatorFirebaseUid`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_hike_logs_isPrivate` ON `hike_logs` (`isPrivate`)");
@@ -91,7 +91,7 @@ public final class WildTrailDatabase_Impl extends WildTrailDatabase {
         db.execSQL("CREATE TABLE IF NOT EXISTS `likes` (`userUid` TEXT NOT NULL, `hikeId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`userUid`, `hikeId`))");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_likes_hikeId` ON `likes` (`hikeId`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'be1ba5cdacf36e25ed89f585adb7517f')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c12824db97ff813d9251aab4146999f6')");
       }
 
       @Override
@@ -149,7 +149,7 @@ public final class WildTrailDatabase_Impl extends WildTrailDatabase {
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsUsers = new HashMap<String, TableInfo.Column>(14);
+        final HashMap<String, TableInfo.Column> _columnsUsers = new HashMap<String, TableInfo.Column>(15);
         _columnsUsers.put("firebaseUid", new TableInfo.Column("firebaseUid", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("username", new TableInfo.Column("username", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("sex", new TableInfo.Column("sex", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -161,6 +161,7 @@ public final class WildTrailDatabase_Impl extends WildTrailDatabase {
         _columnsUsers.put("totalHikesCount", new TableInfo.Column("totalHikesCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("profilePictureUrl", new TableInfo.Column("profilePictureUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("bio", new TableInfo.Column("bio", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsUsers.put("emergencyContactNumber", new TableInfo.Column("emergencyContactNumber", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("createdAt", new TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("lastActive", new TableInfo.Column("lastActive", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsUsers.put("isPublic", new TableInfo.Column("isPublic", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -350,7 +351,7 @@ public final class WildTrailDatabase_Impl extends WildTrailDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "be1ba5cdacf36e25ed89f585adb7517f", "88cd4501a9cd8139a59352f07fd967f0");
+    }, "c12824db97ff813d9251aab4146999f6", "9255491cc6556db1bd9fe5b89f3c9d2a");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

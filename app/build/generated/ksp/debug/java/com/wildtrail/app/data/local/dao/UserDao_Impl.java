@@ -51,7 +51,7 @@ public final class UserDao_Impl implements UserDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `users` (`firebaseUid`,`username`,`sex`,`dateOfBirth`,`country`,`level`,`xpPoints`,`totalDistanceKm`,`totalHikesCount`,`profilePictureUrl`,`bio`,`createdAt`,`lastActive`,`isPublic`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `users` (`firebaseUid`,`username`,`sex`,`dateOfBirth`,`country`,`level`,`xpPoints`,`totalDistanceKm`,`totalHikesCount`,`profilePictureUrl`,`bio`,`emergencyContactNumber`,`createdAt`,`lastActive`,`isPublic`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -89,17 +89,18 @@ public final class UserDao_Impl implements UserDao {
         } else {
           statement.bindString(11, entity.getBio());
         }
-        statement.bindLong(12, entity.getCreatedAt());
-        statement.bindLong(13, entity.getLastActive());
+        statement.bindString(12, entity.getEmergencyContactNumber());
+        statement.bindLong(13, entity.getCreatedAt());
+        statement.bindLong(14, entity.getLastActive());
         final int _tmp_1 = entity.isPublic() ? 1 : 0;
-        statement.bindLong(14, _tmp_1);
+        statement.bindLong(15, _tmp_1);
       }
     };
     this.__updateAdapterOfUserEntity = new EntityDeletionOrUpdateAdapter<UserEntity>(__db) {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `users` SET `firebaseUid` = ?,`username` = ?,`sex` = ?,`dateOfBirth` = ?,`country` = ?,`level` = ?,`xpPoints` = ?,`totalDistanceKm` = ?,`totalHikesCount` = ?,`profilePictureUrl` = ?,`bio` = ?,`createdAt` = ?,`lastActive` = ?,`isPublic` = ? WHERE `firebaseUid` = ?";
+        return "UPDATE OR ABORT `users` SET `firebaseUid` = ?,`username` = ?,`sex` = ?,`dateOfBirth` = ?,`country` = ?,`level` = ?,`xpPoints` = ?,`totalDistanceKm` = ?,`totalHikesCount` = ?,`profilePictureUrl` = ?,`bio` = ?,`emergencyContactNumber` = ?,`createdAt` = ?,`lastActive` = ?,`isPublic` = ? WHERE `firebaseUid` = ?";
       }
 
       @Override
@@ -137,11 +138,12 @@ public final class UserDao_Impl implements UserDao {
         } else {
           statement.bindString(11, entity.getBio());
         }
-        statement.bindLong(12, entity.getCreatedAt());
-        statement.bindLong(13, entity.getLastActive());
+        statement.bindString(12, entity.getEmergencyContactNumber());
+        statement.bindLong(13, entity.getCreatedAt());
+        statement.bindLong(14, entity.getLastActive());
         final int _tmp_1 = entity.isPublic() ? 1 : 0;
-        statement.bindLong(14, _tmp_1);
-        statement.bindString(15, entity.getFirebaseUid());
+        statement.bindLong(15, _tmp_1);
+        statement.bindString(16, entity.getFirebaseUid());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -289,6 +291,7 @@ public final class UserDao_Impl implements UserDao {
           final int _cursorIndexOfTotalHikesCount = CursorUtil.getColumnIndexOrThrow(_cursor, "totalHikesCount");
           final int _cursorIndexOfProfilePictureUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "profilePictureUrl");
           final int _cursorIndexOfBio = CursorUtil.getColumnIndexOrThrow(_cursor, "bio");
+          final int _cursorIndexOfEmergencyContactNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "emergencyContactNumber");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfLastActive = CursorUtil.getColumnIndexOrThrow(_cursor, "lastActive");
           final int _cursorIndexOfIsPublic = CursorUtil.getColumnIndexOrThrow(_cursor, "isPublic");
@@ -338,6 +341,8 @@ public final class UserDao_Impl implements UserDao {
             } else {
               _tmpBio = _cursor.getString(_cursorIndexOfBio);
             }
+            final String _tmpEmergencyContactNumber;
+            _tmpEmergencyContactNumber = _cursor.getString(_cursorIndexOfEmergencyContactNumber);
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpLastActive;
@@ -346,7 +351,7 @@ public final class UserDao_Impl implements UserDao {
             final int _tmp_1;
             _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
             _tmpIsPublic = _tmp_1 != 0;
-            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpEmergencyContactNumber,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
           } else {
             _result = null;
           }
@@ -382,6 +387,7 @@ public final class UserDao_Impl implements UserDao {
           final int _cursorIndexOfTotalHikesCount = CursorUtil.getColumnIndexOrThrow(_cursor, "totalHikesCount");
           final int _cursorIndexOfProfilePictureUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "profilePictureUrl");
           final int _cursorIndexOfBio = CursorUtil.getColumnIndexOrThrow(_cursor, "bio");
+          final int _cursorIndexOfEmergencyContactNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "emergencyContactNumber");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfLastActive = CursorUtil.getColumnIndexOrThrow(_cursor, "lastActive");
           final int _cursorIndexOfIsPublic = CursorUtil.getColumnIndexOrThrow(_cursor, "isPublic");
@@ -431,6 +437,8 @@ public final class UserDao_Impl implements UserDao {
             } else {
               _tmpBio = _cursor.getString(_cursorIndexOfBio);
             }
+            final String _tmpEmergencyContactNumber;
+            _tmpEmergencyContactNumber = _cursor.getString(_cursorIndexOfEmergencyContactNumber);
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpLastActive;
@@ -439,7 +447,7 @@ public final class UserDao_Impl implements UserDao {
             final int _tmp_1;
             _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
             _tmpIsPublic = _tmp_1 != 0;
-            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            _result = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpEmergencyContactNumber,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
           } else {
             _result = null;
           }
@@ -479,6 +487,7 @@ public final class UserDao_Impl implements UserDao {
           final int _cursorIndexOfTotalHikesCount = CursorUtil.getColumnIndexOrThrow(_cursor, "totalHikesCount");
           final int _cursorIndexOfProfilePictureUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "profilePictureUrl");
           final int _cursorIndexOfBio = CursorUtil.getColumnIndexOrThrow(_cursor, "bio");
+          final int _cursorIndexOfEmergencyContactNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "emergencyContactNumber");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfLastActive = CursorUtil.getColumnIndexOrThrow(_cursor, "lastActive");
           final int _cursorIndexOfIsPublic = CursorUtil.getColumnIndexOrThrow(_cursor, "isPublic");
@@ -529,6 +538,8 @@ public final class UserDao_Impl implements UserDao {
             } else {
               _tmpBio = _cursor.getString(_cursorIndexOfBio);
             }
+            final String _tmpEmergencyContactNumber;
+            _tmpEmergencyContactNumber = _cursor.getString(_cursorIndexOfEmergencyContactNumber);
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpLastActive;
@@ -537,7 +548,7 @@ public final class UserDao_Impl implements UserDao {
             final int _tmp_1;
             _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
             _tmpIsPublic = _tmp_1 != 0;
-            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpEmergencyContactNumber,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
             _result.add(_item);
           }
           return _result;
@@ -578,6 +589,7 @@ public final class UserDao_Impl implements UserDao {
           final int _cursorIndexOfTotalHikesCount = CursorUtil.getColumnIndexOrThrow(_cursor, "totalHikesCount");
           final int _cursorIndexOfProfilePictureUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "profilePictureUrl");
           final int _cursorIndexOfBio = CursorUtil.getColumnIndexOrThrow(_cursor, "bio");
+          final int _cursorIndexOfEmergencyContactNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "emergencyContactNumber");
           final int _cursorIndexOfCreatedAt = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAt");
           final int _cursorIndexOfLastActive = CursorUtil.getColumnIndexOrThrow(_cursor, "lastActive");
           final int _cursorIndexOfIsPublic = CursorUtil.getColumnIndexOrThrow(_cursor, "isPublic");
@@ -628,6 +640,8 @@ public final class UserDao_Impl implements UserDao {
             } else {
               _tmpBio = _cursor.getString(_cursorIndexOfBio);
             }
+            final String _tmpEmergencyContactNumber;
+            _tmpEmergencyContactNumber = _cursor.getString(_cursorIndexOfEmergencyContactNumber);
             final long _tmpCreatedAt;
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpLastActive;
@@ -636,7 +650,7 @@ public final class UserDao_Impl implements UserDao {
             final int _tmp_1;
             _tmp_1 = _cursor.getInt(_cursorIndexOfIsPublic);
             _tmpIsPublic = _tmp_1 != 0;
-            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
+            _item = new UserEntity(_tmpFirebaseUid,_tmpUsername,_tmpSex,_tmpDateOfBirth,_tmpCountry,_tmpLevel,_tmpXpPoints,_tmpTotalDistanceKm,_tmpTotalHikesCount,_tmpProfilePictureUrl,_tmpBio,_tmpEmergencyContactNumber,_tmpCreatedAt,_tmpLastActive,_tmpIsPublic);
             _result.add(_item);
           }
           return _result;
