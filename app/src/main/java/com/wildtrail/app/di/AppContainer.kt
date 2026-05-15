@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.wildtrail.app.data.local.WildTrailDatabase
 import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
+import com.wildtrail.app.data.remote.StorageService
 import com.wildtrail.app.data.repository.AchievementRepository
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.EmergencyContactRepository
@@ -65,10 +66,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     private val authService = FirebaseAuthService(FirebaseAuth.getInstance())
     private val firestore = FirestoreService(FirebaseFirestore.getInstance())
+    private val storage = StorageService()
 
     override val authRepository: AuthRepository = AuthRepository(
         authService = authService,
         firestore = firestore,
+        storage = storage,
         userDao = database.userDao(),
         externalScope = appScope,
     )
@@ -76,6 +79,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val userRepository: UserRepository = UserRepository(
         userDao = database.userDao(),
         firestore = firestore,
+        storage = storage,
         externalScope = appScope,
     )
 

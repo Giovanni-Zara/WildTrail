@@ -148,6 +148,17 @@ fun HikeCard(
                 )
             }
 
+            // ----- Route shape thumbnail (lightweight Canvas drawing) --------
+            if (hike.routeCoordinates.size >= 2) {
+                Spacer(Modifier.height(10.dp))
+                RouteThumbnail(
+                    points = hike.routeCoordinates,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp),
+                )
+            }
+
             Spacer(Modifier.height(12.dp))
 
             // ----- Primary stats row (always single line, horizontal) ---------

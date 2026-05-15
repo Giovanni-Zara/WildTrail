@@ -77,6 +77,24 @@ fun TrackingRoute(
             if (!state.hasPermission) {
                 PermissionBanner(onRequest = { permissions.launchMultiplePermissionRequest() })
             }
+            // Live map preview: visible only when we have permission so the
+            // map doesn't request location services before the user opts in.
+            if (state.hasPermission) {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                ) {
+                    com.wildtrail.app.ui.components.RouteMap(
+                        points = state.routePoints,
+                        modifier = Modifier.fillMaxSize(),
+                        follow = state.status == TrackingStatus.RECORDING ||
+                            state.status == TrackingStatus.PAUSED,
+                        showCurrentMarker = true,
+                    )
+                }
+            }
             StatsCard(state)
             Spacer(Modifier.height(8.dp))
             ControlButtons(

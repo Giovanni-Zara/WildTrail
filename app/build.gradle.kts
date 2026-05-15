@@ -153,6 +153,9 @@ dependencies {
     implementation(libs.androidx.credentials.playservices)
     implementation(libs.google.id)
 
+    // MPAndroidChart for the elevation profile on the hike-detail screen.
+    implementation(libs.mpandroidchart)
+
     // ---------- Testing ----------
     testImplementation(libs.junit)
     testImplementation(libs.mockito.kotlin)

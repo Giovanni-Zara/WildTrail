@@ -17,6 +17,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // MPAndroidChart is hosted on JitPack, not Maven Central.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
