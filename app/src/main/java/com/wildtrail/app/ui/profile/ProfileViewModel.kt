@@ -117,11 +117,22 @@ class ProfileViewModel(
         }
     }
 
-    fun updateProfile(bio: String?, country: String?) {
+    fun updateProfile(
+        bio: String?,
+        country: String?,
+        emergencyContactNumber: String? = null,
+    ) {
         val current = uiState.value.user ?: return
         viewModelScope.launch {
             runCatching {
-                userRepository.updateUser(current.copy(bio = bio, country = country))
+                userRepository.updateUser(
+                    current.copy(
+                        bio = bio,
+                        country = country,
+                        emergencyContactNumber = emergencyContactNumber
+                            ?: current.emergencyContactNumber,
+                    ),
+                )
             }
         }
     }
