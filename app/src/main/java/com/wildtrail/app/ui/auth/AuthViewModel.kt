@@ -122,6 +122,9 @@ class AuthViewModel(
 
         viewModelScope.launch {
             val result = if (state.isSignUp) {
+                val pictureUri = state.profilePictureUri.trim()
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { android.net.Uri.parse(it) }
                 authRepository.signUp(
                     email = state.email.trim(),
                     password = state.password,
@@ -130,7 +133,7 @@ class AuthViewModel(
                     dateOfBirth = state.dateOfBirth!!,
                     country = state.country.trim(),
                     bio = state.bio.trim().takeIf { it.isNotEmpty() },
-                    profilePictureUrl = state.profilePictureUri.trim().takeIf { it.isNotEmpty() },
+                    profilePictureUri = pictureUri,
                     emergencyContactNumber = state.emergencyContactNumber.trim()
                         .takeIf { it.isNotEmpty() },
                 )

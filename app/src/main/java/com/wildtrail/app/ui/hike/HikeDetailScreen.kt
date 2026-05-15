@@ -190,6 +190,24 @@ private fun HikeDetailBody(
                     onClick = { onUserClick(hike.creatorFirebaseUid) },
                 )
             }
+            if (hike.routeCoordinates.size >= 2) {
+                item {
+                    androidx.compose.material3.Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    ) {
+                        com.wildtrail.app.ui.components.RouteMap(
+                            points = hike.routeCoordinates,
+                            modifier = Modifier.fillMaxSize(),
+                            follow = false,
+                            showCurrentMarker = false,
+                        )
+                    }
+                }
+                item { com.wildtrail.app.ui.components.ElevationChart(hike.routeCoordinates) }
+            }
             item { HikeStatsCard(hike) }
             item { CharacteristicsCard(hike) }
             item { ReviewStatsCard(hike) }
@@ -453,44 +471,106 @@ private fun Stat(label: String, value: String) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ReviewRow(
     review: TrailReview,
     author: User?,
     onAuthorClick: () -> Unit,
 ) {
-    Card {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AvatarFromUrl(url = author?.profilePictureUrl, size = 32.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // ----- Header: avatar + username + date + big stars ---------
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                AvatarFromUrl(url = author?.profilePictureUrl, size = 44.dp)
                 Column(
                     modifier = Modifier
-                        .padding(start = 8.dp)
+                        .padding(start = 12.dp)
                         .weight(1f)
                         .clickable(onClick = onAuthorClick),
                 ) {
                     Text(
                         author?.username ?: "Unknown user",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                    Text(
+                        com.wildtrail.app.util.formatHikeDate(review.createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                StarRow(rating = review.overallRating.toFloat())
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                StarRow(rating = review.overallRating.toFloat(), size = 22.dp)
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    "${review.overallRating}/5",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ----- Pill grid of trail conditions ------------------------
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                ReviewPill("Difficulty", "${review.difficultyLevel}/5")
+                ReviewPill("Mud", "${review.mudRisk}/5")
+                ReviewPill("Path", "${review.pathClarity}/5")
+                ReviewPill("Fatigue", "${review.fatigueLevel}/5")
+                ReviewPill("Animal risk", "${review.animalEncounterRisk}/5")
+                ReviewPill(
+                    label = if (review.waterAvailability) "💧 Water" else "🚱 No water",
+                    value = null,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewPill(label: String, value: String?) {
+    androidx.compose.material3.Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        ) {
             Text(
-                "Difficulty ${review.difficultyLevel}/5 · Mud ${review.mudRisk}/5 · " +
-                    "Path ${review.pathClarity}/5",
-                style = MaterialTheme.typography.bodySmall,
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                "Fatigue ${review.fatigueLevel}/5 · Animal risk ${review.animalEncounterRisk}/5",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                if (review.waterAvailability) "Water available" else "No water on the trail",
-                style = MaterialTheme.typography.bodySmall,
-            )
+            if (value != null) {
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    value,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }

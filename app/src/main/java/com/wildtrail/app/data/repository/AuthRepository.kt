@@ -1,11 +1,13 @@
 package com.wildtrail.app.data.repository
 
+import android.net.Uri
 import android.util.Log
 import com.wildtrail.app.data.local.dao.UserDao
 import com.wildtrail.app.data.local.entity.toDomain
 import com.wildtrail.app.data.local.entity.toEntity
 import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
+import com.wildtrail.app.data.remote.StorageService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
 import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
@@ -49,6 +51,7 @@ sealed interface AuthState {
 open class AuthRepository(
     private val authService: FirebaseAuthService,
     private val firestore: FirestoreService,
+    private val storage: StorageService,
     private val userDao: UserDao,
     /** Application scope; collection of remote streams must outlive any one screen. */
     private val externalScope: CoroutineScope,
@@ -100,6 +103,11 @@ open class AuthRepository(
     /**
      * Sign-up now collects the demographic profile in one go: sex / DOB /
      * country are mandatory, bio + profile picture are optional.
+     *
+     * The [profilePictureUri] is a local `content://` URI from the system
+     * Photo Picker. If non-null we upload it to Firebase Storage *first*,
+     * then save the resulting HTTPS URL on the user document so other
+     * devices can render it.
      */
     open suspend fun signUp(
         email: String,
@@ -109,10 +117,18 @@ open class AuthRepository(
         dateOfBirth: Long,
         country: String,
         bio: String? = null,
-        profilePictureUrl: String? = null,
+        profilePictureUri: Uri? = null,
         emergencyContactNumber: String? = null,
     ): Result<User> = runCatching {
         val fbUser = authService.signUp(email, password)
+        // Best-effort image upload AFTER the account is created (we need the
+        // UID to namespace the storage path). Failures degrade gracefully —
+        // sign-up still succeeds with a null picture.
+        val uploadedUrl: String? = profilePictureUri?.let { uri ->
+            runCatching { storage.uploadProfilePicture(fbUser.uid, uri) }
+                .onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+                .getOrNull()
+        }
         val now = System.currentTimeMillis()
         val user = User(
             firebaseUid = fbUser.uid,
@@ -124,7 +140,7 @@ open class AuthRepository(
             xpPoints = 0,
             totalDistanceKm = 0f,
             totalHikesCount = 0,
-            profilePictureUrl = profilePictureUrl,
+            profilePictureUrl = uploadedUrl,
             bio = bio,
             emergencyContactNumber = emergencyContactNumber?.takeIf { it.isNotBlank() }
                 ?: DEFAULT_EMERGENCY_NUMBER,

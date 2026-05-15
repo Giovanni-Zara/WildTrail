@@ -134,6 +134,9 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-playservices = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 
+# MPAndroidChart — elevation profile in HikeDetail. JitPack-hosted.
+mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version = "v3.1.0" }
+
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }

@@ -15,6 +15,7 @@ import com.wildtrail.app.domain.model.AchievementDefinition
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,6 +32,7 @@ data class ProfileUiState(
     val likedHikeIds: Set<String> = emptySet(),
     val currentUserUid: String? = null,
     val isMe: Boolean = true,
+    val uploadingPicture: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,6 +78,8 @@ class ProfileViewModel(
         if (uid == null) flowOf(emptySet()) else hikeLogRepository.observeMyLikedHikeIds(uid)
     }
 
+    private val uploadingPicture = MutableStateFlow(false)
+
     val uiState: StateFlow<ProfileUiState> = uidFlow
         .flatMapLatest { uid ->
             if (uid == null) flowOf(ProfileUiState())
@@ -96,6 +100,7 @@ class ProfileViewModel(
                 )
             }
         }
+        .combine(uploadingPicture) { state, uploading -> state.copy(uploadingPicture = uploading) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000L),
@@ -114,6 +119,17 @@ class ProfileViewModel(
             runCatching {
                 hikeLogRepository.setLiked(uid, hike.hikeId, hike.hikeId !in uiState.value.likedHikeIds)
             }
+        }
+    }
+
+    /** Picked URI from the system Photo Picker. Upload happens in the
+     *  background; the row reflects [ProfileUiState.uploadingPicture]. */
+    fun changeProfilePicture(localUri: android.net.Uri) {
+        val uid = uiState.value.user?.firebaseUid ?: return
+        uploadingPicture.value = true
+        viewModelScope.launch {
+            runCatching { userRepository.updateProfilePicture(uid, localUri) }
+            uploadingPicture.value = false
         }
     }
 

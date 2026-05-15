@@ -76,27 +76,41 @@ open class FirestoreService(
         hikes.document(dto.hikeId).set(dto).await()
     }
 
+    /**
+     * **Cross-device safe**: this query intentionally uses *only* an
+     * orderBy on a single field. Combining `whereEqualTo("isPrivate", …)`
+     * with `orderBy("endedAt", …)` would force Firestore to require a
+     * composite index — and if that index isn't deployed on the project
+     * the listener silently errors out, which is exactly what was making
+     * device B fail to see device A's public hikes. We pull the most
+     * recent N documents, then filter `isPrivate == false` client-side.
+     */
     open fun observePublicHikes(limit: Long = 50): Flow<List<HikeLogDto>> = callbackFlow {
-        val reg = hikes.whereEqualTo("isPrivate", false)
+        val reg = hikes
             .orderBy("endedAt", Query.Direction.DESCENDING)
-            .limit(limit)
+            .limit(limit * 2) // fetch a bit extra; private ones get filtered out client-side
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     close(err); return@addSnapshotListener
                 }
-                trySend(snap?.documents?.mapNotNull { it.toObject<HikeLogDto>() } ?: emptyList())
+                val all = snap?.documents?.mapNotNull { it.toObject<HikeLogDto>() } ?: emptyList()
+                trySend(all.filter { !it.isPrivate }.take(limit.toInt()))
             }
         awaitClose { reg.remove() }
     }
 
+    /**
+     * Single-field equality query — no composite index needed. Sorted by
+     * `endedAt` client-side.
+     */
     open fun observeHikesByCreator(uid: String): Flow<List<HikeLogDto>> = callbackFlow {
         val reg = hikes.whereEqualTo("creatorFirebaseUid", uid)
-            .orderBy("endedAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     close(err); return@addSnapshotListener
                 }
-                trySend(snap?.documents?.mapNotNull { it.toObject<HikeLogDto>() } ?: emptyList())
+                val list = snap?.documents?.mapNotNull { it.toObject<HikeLogDto>() } ?: emptyList()
+                trySend(list.sortedByDescending { it.endedAt })
             }
         awaitClose { reg.remove() }
     }
@@ -107,14 +121,15 @@ open class FirestoreService(
         reviews.document(dto.reviewId).set(dto).await()
     }
 
+    /** Single-field equality + client-side sort = no composite index needed. */
     open fun observeReviewsForHike(hikeId: String): Flow<List<TrailReviewDto>> = callbackFlow {
         val reg = reviews.whereEqualTo("hikeId", hikeId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     close(err); return@addSnapshotListener
                 }
-                trySend(snap?.documents?.mapNotNull { it.toObject<TrailReviewDto>() } ?: emptyList())
+                val list = snap?.documents?.mapNotNull { it.toObject<TrailReviewDto>() } ?: emptyList()
+                trySend(list.sortedByDescending { it.createdAt })
             }
         awaitClose { reg.remove() }
     }
@@ -145,14 +160,15 @@ open class FirestoreService(
         comments.document(dto.commentId).set(dto).await()
     }
 
+    /** Single-field equality + client-side sort = no composite index needed. */
     open fun observeCommentsForHike(hikeId: String): Flow<List<HikeCommentDto>> = callbackFlow {
         val reg = comments.whereEqualTo("hikeId", hikeId)
-            .orderBy("createdAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
                     close(err); return@addSnapshotListener
                 }
-                trySend(snap?.documents?.mapNotNull { it.toObject<HikeCommentDto>() } ?: emptyList())
+                val list = snap?.documents?.mapNotNull { it.toObject<HikeCommentDto>() } ?: emptyList()
+                trySend(list.sortedBy { it.createdAt })
             }
         awaitClose { reg.remove() }
     }

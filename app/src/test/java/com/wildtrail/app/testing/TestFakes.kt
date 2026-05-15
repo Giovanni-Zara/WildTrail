@@ -94,6 +94,13 @@ fun stubAuthService(): FirebaseAuthService = mock {
 /** Stub [FirestoreService] — null db means it never hits Firebase. */
 fun stubFirestoreService(): FirestoreService = FirestoreService(db = null)
 
+/** Stub [com.wildtrail.app.data.remote.StorageService] — never actually uploads. */
+fun stubStorageService(): com.wildtrail.app.data.remote.StorageService =
+    object : com.wildtrail.app.data.remote.StorageService() {
+        override suspend fun uploadProfilePicture(uid: String, localUri: android.net.Uri): String =
+            "https://example.test/$uid.jpg"
+    }
+
 /**
  * Fake [AuthRepository] used by view-model tests. Extends the production
  * class, pre-stubs the heavy collaborators, and overrides only what the
@@ -102,6 +109,7 @@ fun stubFirestoreService(): FirestoreService = FirestoreService(db = null)
 class FakeAuthRepository : AuthRepository(
     authService = stubAuthService(),
     firestore = stubFirestoreService(),
+    storage = stubStorageService(),
     userDao = FakeUserDao(),
     externalScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
 ) {
@@ -128,7 +136,7 @@ class FakeAuthRepository : AuthRepository(
         dateOfBirth: Long,
         country: String,
         bio: String?,
-        profilePictureUrl: String?,
+        profilePictureUri: android.net.Uri?,
         emergencyContactNumber: String?,
     ): Result<User> {
         signUpCalls++

@@ -1,10 +1,12 @@
 package com.wildtrail.app.data.repository
 
+import android.net.Uri
 import android.util.Log
 import com.wildtrail.app.data.local.dao.UserDao
 import com.wildtrail.app.data.local.entity.toDomain
 import com.wildtrail.app.data.local.entity.toEntity
 import com.wildtrail.app.data.remote.FirestoreService
+import com.wildtrail.app.data.remote.StorageService
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
 import com.wildtrail.app.domain.model.User
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.onEach
 class UserRepository(
     private val userDao: UserDao,
     private val firestore: FirestoreService,
+    private val storage: StorageService,
     private val externalScope: CoroutineScope,
 ) {
 
@@ -69,6 +72,21 @@ class UserRepository(
         )
         updateUser(updated)
     }
+
+    /**
+     * Upload a freshly-picked local [Uri] to Firebase Storage, then patch
+     * the user document with the resulting HTTPS URL. Returns true on
+     * success — callers ignore the result; the user's local row is updated
+     * either way (offline-first).
+     */
+    suspend fun updateProfilePicture(uid: String, localUri: Uri): Boolean = runCatching {
+        val url = storage.uploadProfilePicture(uid, localUri)
+        val current = userDao.getById(uid)?.toDomain() ?: return@runCatching false
+        updateUser(current.copy(profilePictureUrl = url))
+        true
+    }
+        .onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+        .getOrDefault(false)
 
     suspend fun search(query: String): List<User> =
         userDao.searchByUsername(query).map { it.toDomain() }
