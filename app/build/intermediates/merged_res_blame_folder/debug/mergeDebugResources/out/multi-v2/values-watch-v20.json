@@ -4,7 +4,7 @@
             "outputFile": "com.wildtrail.app-mergeDebugResources-89:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\a7e38fd88663bca1e66b191ec14e4121\\transformed\\play-services-auth-21.1.1\\res\\values-watch-v20\\values.xml",
+                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\1561674daf29d5619f5d3504b96af6ae\\transformed\\play-services-auth-21.1.1\\res\\values-watch-v20\\values.xml",
                     "from": {
                         "startLines": "4,5,6,7,8,9,10,11",
                         "startColumns": "0,0,0,0,0,0,0,0",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\70e0ca44b367656376cfe6dde8bbeca0\\transformed\\core-splashscreen-1.0.1\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\2bedd6d1fd1c889e9fafead16d7500a4\\transformed\\core-splashscreen-1.0.1\\res\\values-watch-v20\\values-watch-v20.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -38,7 +38,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\5bc0e43aa0aae84474cdd9e1d6c9f121\\transformed\\appcompat-1.6.1\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "source": "C:\\Users\\giuse\\.gradle\\caches\\8.10.2\\transforms\\3fdb14aaf08048683f75692d6d21222c\\transformed\\appcompat-1.6.1\\res\\values-watch-v20\\values-watch-v20.xml",
                     "from": {
                         "startLines": "2,5,8",
                         "startColumns": "4,4,4",

@@ -96,8 +96,20 @@ class HikeLogRepository(
      *
      * Only rows that actually differ are rewritten, so this is a no-op when
      * nothing changed and never fans out redundant Firestore writes.
+     *
+     * [pushRemote] = false keeps the change local (Room only). The
+     * offline-first profile-picture flow uses this for its optimistic step:
+     * the picked image lives at a device-local `file://` path that is
+     * meaningless on other devices, so it must never reach Firestore. Once
+     * the cross-device HTTPS URL is available, this is called again with
+     * [pushRemote] = true to fan the canonical URL out everywhere.
      */
-    suspend fun syncCreatorInfo(uid: String, username: String, profilePictureUrl: String?) {
+    suspend fun syncCreatorInfo(
+        uid: String,
+        username: String,
+        profilePictureUrl: String?,
+        pushRemote: Boolean = true,
+    ) {
         hikeLogDao.getByCreator(uid).forEach { row ->
             if (row.creatorUsername != username ||
                 row.creatorProfilePictureUrl != profilePictureUrl
@@ -107,8 +119,10 @@ class HikeLogRepository(
                     creatorProfilePictureUrl = profilePictureUrl,
                 )
                 hikeLogDao.upsert(patched)
-                runCatching { firestore.upsertHike(patched.toDomain().toDto()) }
-                    .onFailure { Log.w(TAG, "Firestore creator-info sync skipped", it) }
+                if (pushRemote) {
+                    runCatching { firestore.upsertHike(patched.toDomain().toDto()) }
+                        .onFailure { Log.w(TAG, "Firestore creator-info sync skipped", it) }
+                }
             }
         }
     }
@@ -190,37 +204,58 @@ class HikeLogRepository(
     }
 
     /**
-     * For hikes saved BEFORE we started denormalising the creator's
-     * username + photo onto the hike doc, the [HikeLogDto.creatorUsername]
-     * field arrives blank. We lazily fetch each unknown creator's user
-     * profile from Firestore and patch their hikes in our local Room
-     * (and Firestore, if the rules allow) so the UI can render proper names.
+     * Keep the *denormalised* creator name + picture on every feed hike
+     * fresh, so a card preview shows the same avatar the hike-detail screen
+     * resolves via a live user lookup.
      *
-     * Idempotent per UID: each creator is looked up at most once per app
-     * session.
+     * Originally this only filled hikes whose `creatorUsername` arrived
+     * blank. That left a gap: if a creator added/changed their picture
+     * *after* posting a hike, the hike doc still carried the old (or null)
+     * value, so previews showed the generic person icon while the detail
+     * screen — which observes the live user — showed the real picture. We
+     * now reconcile every creator in the feed against their current user
+     * profile.
+     *
+     * Rules:
+     *  - Looked up at most once per creator per app session (idempotent).
+     *  - A remote `null` picture never clears an existing one — the
+     *    creator's Storage upload may simply not have landed yet.
+     *  - A device-local `file://` picture is never pushed to Firestore
+     *    (meaningless on other devices); the local Room patch still happens
+     *    so the owner sees it.
      */
     private fun backfillCreators(dtos: List<HikeLogDto>) {
-        val needsBackfill = dtos.filter { it.creatorUsername.isBlank() }
-            .map { it.creatorFirebaseUid }
-            .toSet()
-        if (needsBackfill.isEmpty()) return
+        val creatorUids = dtos.map { it.creatorFirebaseUid }.toSet()
+        if (creatorUids.isEmpty()) return
         externalScope.launch {
-            needsBackfill.forEach { uid ->
+            creatorUids.forEach { uid ->
                 if (!backfilledUids.add(uid)) return@forEach
                 runCatching {
                     val user = firestore.getUser(uid)?.toDomain() ?: return@runCatching
                     if (user.username.isBlank()) return@runCatching
-                    // Cache the user locally too (no FK constraints any more).
-                    userDao.upsert(user.toEntity())
-                    // Patch all of this creator's hikes that are currently blank.
-                    val hikes = hikeLogDao.getByCreator(uid)
-                    hikes.filter { it.creatorUsername.isBlank() }.forEach { row ->
+                    // Cache the user locally too (no FK constraints any more),
+                    // but don't let a remote with no picture clobber a
+                    // locally-pending file:// one.
+                    val local = userDao.getById(uid)?.toDomain()
+                    userDao.upsert(user.keepingLocalPicture(local).toEntity())
+                    hikeLogDao.getByCreator(uid).forEach { row ->
+                        // Fill the freshest creator info; never blank an
+                        // existing picture with a remote null.
+                        val newPic = user.profilePictureUrl ?: row.creatorProfilePictureUrl
+                        if (row.creatorUsername == user.username &&
+                            row.creatorProfilePictureUrl == newPic
+                        ) {
+                            return@forEach
+                        }
                         val patched = row.copy(
                             creatorUsername = user.username,
-                            creatorProfilePictureUrl = user.profilePictureUrl,
+                            creatorProfilePictureUrl = newPic,
                         )
                         hikeLogDao.upsert(patched)
-                        runCatching { firestore.upsertHike(patched.toDomain().toDto()) }
+                        if (newPic?.startsWith("file://") != true) {
+                            runCatching { firestore.upsertHike(patched.toDomain().toDto()) }
+                                .onFailure { Log.w(TAG, "Firestore creator backfill push skipped", it) }
+                        }
                     }
                 }.onFailure { Log.w(TAG, "Creator backfill skipped for $uid", it) }
             }

@@ -101,6 +101,13 @@ fun stubStorageService(): com.wildtrail.app.data.remote.StorageService =
             "https://example.test/$uid.jpg"
     }
 
+/** Stub [com.wildtrail.app.util.LocalImageStore] — no filesystem / Context. */
+fun stubLocalImageStore(): com.wildtrail.app.util.LocalImageStore =
+    object : com.wildtrail.app.util.LocalImageStore(mock()) {
+        override suspend fun saveProfilePicture(uid: String, srcUri: android.net.Uri) =
+            java.io.File("/tmp/$uid.jpg")
+    }
+
 /**
  * Fake [AuthRepository] used by view-model tests. Extends the production
  * class, pre-stubs the heavy collaborators, and overrides only what the
@@ -110,6 +117,7 @@ class FakeAuthRepository : AuthRepository(
     authService = stubAuthService(),
     firestore = stubFirestoreService(),
     storage = stubStorageService(),
+    imageStore = stubLocalImageStore(),
     userDao = FakeUserDao(),
     externalScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
 ) {

@@ -32,6 +32,7 @@ import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
 import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.ui.components.HikeCard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,13 +55,18 @@ data class LikedHikesUiState(
 class LikedHikesViewModel(
     private val authRepository: AuthRepository,
     private val hikeLogRepository: HikeLogRepository,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
 
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
 
     private val likedHikes = currentUidFlow.flatMapLatest { uid ->
-        if (uid == null) flowOf(emptyList()) else hikeLogRepository.observeLikedHikes(uid)
+        if (uid == null) {
+            flowOf(emptyList())
+        } else {
+            userRepository.withLiveCreatorPictures(hikeLogRepository.observeLikedHikes(uid))
+        }
     }
 
     private val likedHikeIds = currentUidFlow.flatMapLatest { uid ->
@@ -95,6 +101,7 @@ class LikedHikesViewModel(
                 LikedHikesViewModel(
                     authRepository = app.container.authRepository,
                     hikeLogRepository = app.container.hikeLogRepository,
+                    userRepository = app.container.userRepository,
                 )
             }
         }

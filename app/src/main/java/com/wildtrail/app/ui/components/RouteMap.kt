@@ -31,8 +31,10 @@ import com.wildtrail.app.domain.model.GeoPoint
  *    recent point. The polyline grows in real-time as new samples arrive.
  *  - When [follow] is `false` (post-hike viewer) the camera frames the
  *    full bounding box of the route exactly once.
- *  - When [points] is empty we render a small placeholder so the parent
- *    can give the map a fixed height without an awkward empty box.
+ *  - [currentLocation] lets the map render *before* a route exists (e.g. the
+ *    tracking screen before "Start hike"): we center on the user and drop a
+ *    marker instead of showing a "waiting for GPS" box. The placeholder is
+ *    only used when we have neither a route nor a current fix.
  */
 @Composable
 fun RouteMap(
@@ -40,10 +42,11 @@ fun RouteMap(
     modifier: Modifier = Modifier,
     follow: Boolean = false,
     showCurrentMarker: Boolean = false,
+    currentLocation: GeoPoint? = null,
 ) {
-    if (points.isEmpty()) {
-        // Empty placeholder. We still take up the requested size so the
-        // parent layout doesn't snap.
+    if (points.isEmpty() && currentLocation == null) {
+        // No route and no fix yet. We still take up the requested size so
+        // the parent layout doesn't snap.
         androidx.compose.foundation.layout.Box(
             modifier = modifier,
             contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -58,12 +61,21 @@ fun RouteMap(
     }
 
     val latLngs = remember(points) { points.map { LatLng(it.lat, it.lng) } }
+    val currentLatLng = currentLocation?.let { LatLng(it.lat, it.lng) }
+    val focus = latLngs.firstOrNull() ?: currentLatLng!!
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(latLngs.first(), 16f)
+        position = CameraPosition.fromLatLngZoom(focus, 16f)
     }
 
-    // Live-track: re-center on the most-recent point each emission.
-    if (follow) {
+    if (latLngs.isEmpty()) {
+        // Pre-route: just keep the camera on the user's latest fix.
+        LaunchedEffect(currentLatLng) {
+            currentLatLng?.let {
+                cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it, 16f))
+            }
+        }
+    } else if (follow) {
+        // Live-track: re-center on the most-recent point each emission.
         LaunchedEffect(latLngs.lastOrNull()) {
             latLngs.lastOrNull()?.let { newest ->
                 cameraPositionState.animate(
@@ -96,13 +108,15 @@ fun RouteMap(
             mapToolbarEnabled = false,
         ),
     ) {
-        Polyline(
-            points = latLngs,
-            color = androidx.compose.ui.graphics.Color(0xFF2E5D3A), // brand forest green
-            width = 10f,
-        )
+        if (latLngs.isNotEmpty()) {
+            Polyline(
+                points = latLngs,
+                color = androidx.compose.ui.graphics.Color(0xFF2E5D3A), // brand forest green
+                width = 10f,
+            )
+        }
         if (showCurrentMarker) {
-            latLngs.lastOrNull()?.let { current ->
+            (latLngs.lastOrNull() ?: currentLatLng)?.let { current ->
                 Marker(state = MarkerState(position = current), title = "You")
             }
         }

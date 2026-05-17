@@ -114,6 +114,7 @@ fun HomeContent(
                             onLikeClick = { onToggleLike(hike) },
                             onCreatorClick = onUserClick,
                             currentUserUid = state.currentUser?.firebaseUid,
+                            currentUserProfilePictureUrl = state.currentUser?.profilePictureUrl,
                         )
                     }
                 }
@@ -131,6 +132,7 @@ fun HomeContent(
                         onLikeClick = { onToggleLike(hike) },
                         onCreatorClick = onUserClick,
                         currentUserUid = state.currentUser?.firebaseUid,
+                        currentUserProfilePictureUrl = state.currentUser?.profilePictureUrl,
                     )
                 }
                 item { Spacer(Modifier.height(24.dp)) }

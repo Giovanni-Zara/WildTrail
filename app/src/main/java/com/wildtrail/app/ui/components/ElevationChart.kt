@@ -1,6 +1,7 @@
 package com.wildtrail.app.ui.components
 
 import android.graphics.Color
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,7 +57,7 @@ fun ElevationChart(points: List<GeoPoint>) {
         }
         AndroidView(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(8.dp),
             factory = { ctx ->
                 LineChart(ctx).apply {

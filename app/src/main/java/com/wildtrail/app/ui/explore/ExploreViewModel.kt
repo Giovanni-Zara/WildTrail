@@ -9,6 +9,7 @@ import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
 import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.HikeLog
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,11 +43,19 @@ data class ExploreUiState(
 class ExploreViewModel(
     private val hikeLogRepository: HikeLogRepository,
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
     private val sort = MutableStateFlow(SortOption.RECENT)
     private val results = MutableStateFlow<List<HikeLog>>(emptyList())
+
+    // Splice each creator's live profile picture onto the cards so previews
+    // show the same avatar the hike-detail screen does.
+    private val featured = userRepository.withLiveCreatorPictures(
+        hikeLogRepository.observePublicFeed(20),
+    )
+    private val enrichedResults = userRepository.withLiveCreatorPictures(results)
 
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
@@ -60,16 +69,16 @@ class ExploreViewModel(
 
     val uiState: StateFlow<ExploreUiState> = combine(
         controls,
-        results,
-        hikeLogRepository.observePublicFeed(20),
+        enrichedResults,
+        featured,
         likedHikeIds,
         currentUidFlow,
-    ) { (q, s), r, featured, liked, uid ->
+    ) { (q, s), r, featuredHikes, liked, uid ->
         ExploreUiState(
             query = q,
             sort = s,
             results = sortHikes(r, s),
-            featured = sortHikes(featured, s),
+            featured = sortHikes(featuredHikes, s),
             likedHikeIds = liked,
             currentUserUid = uid,
         )
@@ -123,6 +132,7 @@ class ExploreViewModel(
                 ExploreViewModel(
                     hikeLogRepository = app.container.hikeLogRepository,
                     authRepository = app.container.authRepository,
+                    userRepository = app.container.userRepository,
                 )
             }
         }

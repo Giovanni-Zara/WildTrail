@@ -1,5 +1,5 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -8,11 +8,14 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
+build
+app/build/
+app/build/intermediates
 /captures
 /.claude
 .externalNativeBuild
 .cxx
+*.dex
 local.properties
 app/google-services.json
 *.keystore
