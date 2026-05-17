@@ -85,7 +85,7 @@ class ProfileViewModel(
             if (uid == null) flowOf(ProfileUiState())
             else combine(
                 userRepository.observeUser(uid),
-                hikeLogRepository.observeMyHikes(uid),
+                userRepository.withLiveCreatorPictures(hikeLogRepository.observeMyHikes(uid)),
                 achievementRepository.observeEarned(uid),
                 currentUidFlow,
                 likedHikeIds,

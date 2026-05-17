@@ -92,6 +92,7 @@ fun TrackingRoute(
                         follow = state.status == TrackingStatus.RECORDING ||
                             state.status == TrackingStatus.PAUSED,
                         showCurrentMarker = true,
+                        currentLocation = state.currentLocation,
                     )
                 }
             }

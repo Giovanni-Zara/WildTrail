@@ -39,7 +39,7 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val publicFeed: Flow<List<HikeLog>> =
-        hikeLogRepository.observePublicFeed(20)
+        userRepository.withLiveCreatorPictures(hikeLogRepository.observePublicFeed(20))
 
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
@@ -54,7 +54,11 @@ class HomeViewModel(
 
     private val myHikes: Flow<List<HikeLog>> = currentUidFlow
         .flatMapLatest { uid ->
-            if (uid == null) flowOf(emptyList()) else hikeLogRepository.observeMyHikes(uid)
+            if (uid == null) {
+                flowOf(emptyList())
+            } else {
+                userRepository.withLiveCreatorPictures(hikeLogRepository.observeMyHikes(uid))
+            }
         }
 
     private val likedHikeIds: Flow<Set<String>> = currentUidFlow

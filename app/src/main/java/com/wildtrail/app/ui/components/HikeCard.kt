@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -62,8 +63,18 @@ fun HikeCard(
     /** Uid of the currently signed-in user. If it matches the creator, the
      *  card shows "You" instead of the cached creator name. */
     currentUserUid: String? = null,
+    /** Signed-in user's *live* profile picture. For the user's own hikes we
+     *  prefer this over the denormalised [HikeLog.creatorProfilePictureUrl]
+     *  so a freshly-picked picture shows immediately, without waiting for
+     *  the creator-info re-stamp to propagate. */
+    currentUserProfilePictureUrl: String? = null,
 ) {
     val isOwnHike = currentUserUid != null && currentUserUid == hike.creatorFirebaseUid
+    val avatarUrl = if (isOwnHike && currentUserProfilePictureUrl != null) {
+        currentUserProfilePictureUrl
+    } else {
+        hike.creatorProfilePictureUrl
+    }
     val displayName = when {
         isOwnHike -> "You"
         hike.creatorUsername.isNotBlank() -> hike.creatorUsername
@@ -90,10 +101,11 @@ fun HikeCard(
                     modifier = Modifier.size(28.dp).clip(CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (hike.creatorProfilePictureUrl != null) {
+                    if (avatarUrl != null) {
                         AsyncImage(
-                            model = hike.creatorProfilePictureUrl,
+                            model = avatarUrl,
                             contentDescription = null,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier.size(28.dp).clip(CircleShape),
                         )
                     } else {

@@ -14,6 +14,7 @@ import com.wildtrail.app.data.repository.EmergencyContactRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
+import com.wildtrail.app.util.LocalImageStore
 import com.wildtrail.app.util.LocationTracker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -67,12 +68,26 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val authService = FirebaseAuthService(FirebaseAuth.getInstance())
     private val firestore = FirestoreService(FirebaseFirestore.getInstance())
     private val storage = StorageService()
+    private val localImageStore = LocalImageStore(context.applicationContext)
 
     override val authRepository: AuthRepository = AuthRepository(
         authService = authService,
         firestore = firestore,
         storage = storage,
+        imageStore = localImageStore,
         userDao = database.userDao(),
+        externalScope = appScope,
+    )
+
+    // Declared before userRepository because UserRepository depends on it
+    // (it fans a profile-picture change out onto the user's hike cards), and
+    // `override val`s initialise in declaration order.
+    override val hikeLogRepository: HikeLogRepository = HikeLogRepository(
+        hikeLogDao = database.hikeLogDao(),
+        likeDao = database.likeDao(),
+        reviewDao = database.trailReviewDao(),
+        userDao = database.userDao(),
+        firestore = firestore,
         externalScope = appScope,
     )
 
@@ -80,15 +95,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
         userDao = database.userDao(),
         firestore = firestore,
         storage = storage,
-        externalScope = appScope,
-    )
-
-    override val hikeLogRepository: HikeLogRepository = HikeLogRepository(
-        hikeLogDao = database.hikeLogDao(),
-        likeDao = database.likeDao(),
-        reviewDao = database.trailReviewDao(),
-        userDao = database.userDao(),
-        firestore = firestore,
+        imageStore = localImageStore,
+        hikeLogRepository = hikeLogRepository,
         externalScope = appScope,
     )
 

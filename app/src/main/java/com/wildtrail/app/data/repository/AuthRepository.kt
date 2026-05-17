@@ -13,6 +13,7 @@ import com.wildtrail.app.data.remote.dto.toDto
 import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.util.LocalImageStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,6 +53,7 @@ open class AuthRepository(
     private val authService: FirebaseAuthService,
     private val firestore: FirestoreService,
     private val storage: StorageService,
+    private val imageStore: LocalImageStore,
     private val userDao: UserDao,
     /** Application scope; collection of remote streams must outlive any one screen. */
     private val externalScope: CoroutineScope,
@@ -80,7 +82,10 @@ open class AuthRepository(
                     // rules, transient SDK error) must NEVER crash the app.
                     runCatching {
                         val remote = firestore.getUser(firebaseUser.uid)?.toDomain()
-                        if (remote != null) userDao.upsert(remote.toEntity())
+                        if (remote != null) {
+                            val local = userDao.getById(firebaseUser.uid)?.toDomain()
+                            userDao.upsert(remote.keepingLocalPicture(local).toEntity())
+                        }
                     }.onFailure { Log.w(TAG, "Background user refresh failed", it) }
                 }
                 _isInitialised.value = true
@@ -95,7 +100,12 @@ open class AuthRepository(
         // a freshly-bootstrapped local user. We never let a Firestore error
         // turn a successful auth into a failed login.
         val remote = runCatching { firestore.getUser(fbUser.uid)?.toDomain() }.getOrNull()
-        val user = remote ?: bootstrapUser(fbUser.uid, fbUser.email)
+        val local = userDao.getById(fbUser.uid)?.toDomain()
+        // Prefer remote, but never let it (or a Firestore miss) wipe a
+        // locally-pending profile picture that hasn't finished uploading.
+        val user = remote?.keepingLocalPicture(local)
+            ?: local
+            ?: bootstrapUser(fbUser.uid, fbUser.email)
         userDao.upsert(user.toEntity())
         user
     }
@@ -105,9 +115,11 @@ open class AuthRepository(
      * country are mandatory, bio + profile picture are optional.
      *
      * The [profilePictureUri] is a local `content://` URI from the system
-     * Photo Picker. If non-null we upload it to Firebase Storage *first*,
-     * then save the resulting HTTPS URL on the user document so other
-     * devices can render it.
+     * Photo Picker. We follow the same offline-first path as a later
+     * picture change: copy it into app storage and save it on the user
+     * immediately (so the profile shows it even with Storage disabled /
+     * offline), then best-effort upload and swap to the cross-device HTTPS
+     * URL once it is available.
      */
     open suspend fun signUp(
         email: String,
@@ -121,14 +133,17 @@ open class AuthRepository(
         emergencyContactNumber: String? = null,
     ): Result<User> = runCatching {
         val fbUser = authService.signUp(email, password)
-        // Best-effort image upload AFTER the account is created (we need the
-        // UID to namespace the storage path). Failures degrade gracefully —
-        // sign-up still succeeds with a null picture.
-        val uploadedUrl: String? = profilePictureUri?.let { uri ->
-            runCatching { storage.uploadProfilePicture(fbUser.uid, uri) }
-                .onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+        // Copy the picked image into app-owned storage so the new account
+        // shows it immediately — even when the Storage upload below fails
+        // (Storage disabled / offline). The Photo Picker only grants a
+        // transient read on the content:// URI, so the bytes must be copied
+        // now rather than the URI persisted.
+        val localFile = profilePictureUri?.let { uri ->
+            runCatching { imageStore.saveProfilePicture(fbUser.uid, uri) }
+                .onFailure { Log.w(TAG, "Local profile picture copy failed", it) }
                 .getOrNull()
         }
+        val localPath = localFile?.let { Uri.fromFile(it).toString() }
         val now = System.currentTimeMillis()
         val user = User(
             firebaseUid = fbUser.uid,
@@ -140,7 +155,7 @@ open class AuthRepository(
             xpPoints = 0,
             totalDistanceKm = 0f,
             totalHikesCount = 0,
-            profilePictureUrl = uploadedUrl,
+            profilePictureUrl = localPath,
             bio = bio,
             emergencyContactNumber = emergencyContactNumber?.takeIf { it.isNotBlank() }
                 ?: DEFAULT_EMERGENCY_NUMBER,
@@ -148,11 +163,25 @@ open class AuthRepository(
             lastActive = now,
             isPublic = true,
         )
-        // Always write to Room (offline-first). Firestore is best-effort:
-        // if rules / network block us, the user is still locally signed in.
+        // Room gets the local path (offline-first). Firestore must NOT get a
+        // device-local file:// path, so push the doc with the picture cleared
+        // — the HTTPS URL is synced once the upload below succeeds.
         userDao.upsert(user.toEntity())
-        runCatching { firestore.upsertUser(user.toDto()) }
+        runCatching { firestore.upsertUser(user.copy(profilePictureUrl = null).toDto()) }
             .onFailure { Log.w(TAG, "Firestore profile sync skipped on signUp", it) }
+
+        // Best-effort upload of the file we own; swap to the cross-device
+        // HTTPS URL on success (Room + Firestore).
+        val uploadSource = localFile?.let(Uri::fromFile) ?: profilePictureUri
+        if (uploadSource != null) {
+            runCatching {
+                val url = storage.uploadProfilePicture(fbUser.uid, uploadSource)
+                val patched = user.copy(profilePictureUrl = url)
+                userDao.upsert(patched.toEntity())
+                runCatching { firestore.upsertUser(patched.toDto()) }
+                    .onFailure { Log.w(TAG, "Firestore picture URL sync skipped on signUp", it) }
+            }.onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+        }
         user
     }
 

@@ -41,6 +41,9 @@ data class TrackingUiState(
     val hasPermission: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
+    /** Latest GPS fix, tracked even before "Start hike" so the map can
+     *  center on the user instead of showing a "waiting for GPS" box. */
+    val currentLocation: GeoPoint? = null,
 )
 
 enum class TrackingStatus { IDLE, RECORDING, PAUSED, STOPPED }
@@ -57,15 +60,48 @@ class TrackingViewModel(
 
     /** Current location-collection job; cancelled on pause/stop. */
     private var locationJob: Job? = null
+
+    /** Lightweight location collection that runs *before* recording so the
+     *  map has a position to show. Cancelled once real recording starts. */
+    private var previewJob: Job? = null
     private var startTimeMs: Long = 0L
     private var elapsedBeforePauseMs: Long = 0L
 
     init {
-        _uiState.update { it.copy(hasPermission = locationTracker.hasLocationPermission()) }
+        val granted = locationTracker.hasLocationPermission()
+        _uiState.update { it.copy(hasPermission = granted) }
+        if (granted) startLocationPreview()
     }
 
     fun onPermissionResult(granted: Boolean) {
         _uiState.update { it.copy(hasPermission = granted) }
+        if (granted) startLocationPreview()
+    }
+
+    /**
+     * Stream the user's position while we're idle so the map can center on
+     * them immediately. Only touches [TrackingUiState.currentLocation] — the
+     * recorded route is owned by [beginCollecting]; this never adds points.
+     */
+    private fun startLocationPreview() {
+        if (previewJob?.isActive == true) return
+        previewJob = viewModelScope.launch {
+            try {
+                locationTracker.observeLocation(intervalMs = 3_000L).collect { point ->
+                    _uiState.update { st ->
+                        if (st.status == TrackingStatus.IDLE ||
+                            st.status == TrackingStatus.STOPPED
+                        ) {
+                            st.copy(currentLocation = point)
+                        } else {
+                            st
+                        }
+                    }
+                }
+            } catch (e: SecurityException) {
+                _uiState.update { it.copy(errorMessage = e.message, hasPermission = false) }
+            }
+        }
     }
 
     fun start() {
@@ -75,6 +111,8 @@ class TrackingViewModel(
         }
         startTimeMs = System.currentTimeMillis()
         elapsedBeforePauseMs = 0L
+        // The recording collector takes over location; stop the idle preview.
+        previewJob?.cancel()
         _uiState.update { it.copy(status = TrackingStatus.RECORDING, routePoints = emptyList(), errorMessage = null) }
         beginCollecting()
         beginTimer()
@@ -129,11 +167,18 @@ class TrackingViewModel(
         }
         val now = System.currentTimeMillis()
         val durationSec = state.durationSec
-        val hike = HikeLog(
+        viewModelScope.launch {
+            // authState.user is a snapshot captured at sign-in (it never
+            // re-emits on Room changes), so a profile picture set/changed
+            // afterwards isn't on it. Read the live Room user so the picture
+            // is denormalised onto the hike and shows on every card preview.
+            val creator = runCatching { userRepository.getUser(auth.user.firebaseUid) }
+                .getOrNull() ?: auth.user
+            val hike = HikeLog(
             hikeId = UUID.randomUUID().toString(),
-            creatorFirebaseUid = auth.user.firebaseUid,
-            creatorUsername = auth.user.username,
-            creatorProfilePictureUrl = auth.user.profilePictureUrl,
+            creatorFirebaseUid = creator.firebaseUid,
+            creatorUsername = creator.username,
+            creatorProfilePictureUrl = creator.profilePictureUrl,
             workoutId = null,
             title = title,
             description = description,
@@ -159,8 +204,7 @@ class TrackingViewModel(
             waterAvailability = waterAvailability,
             averageRating = 0f,
             reviewCount = 0,
-        )
-        viewModelScope.launch {
+            )
             runCatching {
                 hikeLogRepository.saveHike(hike)
                 // Bump the cached user totals so the Profile screen reflects
@@ -169,7 +213,7 @@ class TrackingViewModel(
                 // user to see "Could not save hike" when the hike *was* saved.
                 runCatching {
                     userRepository.incrementHikeStats(
-                        uid = auth.user.firebaseUid,
+                        uid = creator.firebaseUid,
                         distanceKm = hike.lengthKm,
                         xpEarned = hike.xpEarned,
                     )
@@ -183,7 +227,9 @@ class TrackingViewModel(
     }
 
     fun resetAfterSave() {
-        _uiState.value = TrackingUiState(hasPermission = locationTracker.hasLocationPermission())
+        val granted = locationTracker.hasLocationPermission()
+        _uiState.value = TrackingUiState(hasPermission = granted)
+        if (granted) startLocationPreview()
     }
 
     private fun beginCollecting() {
@@ -196,6 +242,7 @@ class TrackingViewModel(
                         val gain = HikeMath.elevationGainMeters(newRoute)
                         state.copy(
                             routePoints = newRoute,
+                            currentLocation = point,
                             distanceKm = distanceKm,
                             elevationGainM = gain,
                             avgSpeedKmh = HikeMath.avgSpeedKmh(distanceKm, state.durationSec),
