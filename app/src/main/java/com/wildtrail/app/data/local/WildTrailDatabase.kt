@@ -15,6 +15,7 @@ import com.wildtrail.app.data.local.dao.LikeDao
 import com.wildtrail.app.data.local.dao.TrailReviewDao
 import com.wildtrail.app.data.local.dao.UserDao
 import com.wildtrail.app.data.local.dao.UserFollowDao
+import com.wildtrail.app.data.local.dao.WeatherDao
 import com.wildtrail.app.data.local.entity.AchievementDefinitionEntity
 import com.wildtrail.app.data.local.entity.EmergencyContactEntity
 import com.wildtrail.app.data.local.entity.FollowedTrailEntity
@@ -25,6 +26,7 @@ import com.wildtrail.app.data.local.entity.TrailReviewEntity
 import com.wildtrail.app.data.local.entity.UserAchievementEntity
 import com.wildtrail.app.data.local.entity.UserEntity
 import com.wildtrail.app.data.local.entity.UserFollowEntity
+import com.wildtrail.app.data.local.entity.WeatherEntity
 
 /**
  * The Room database for WildTrail.
@@ -52,6 +54,7 @@ import com.wildtrail.app.data.local.entity.UserFollowEntity
         UserAchievementEntity::class,
         EmergencyContactEntity::class,
         LikeEntity::class,
+        WeatherEntity::class,
     ],
 )
 @TypeConverters(Converters::class)
@@ -66,9 +69,10 @@ abstract class WildTrailDatabase : RoomDatabase() {
     abstract fun achievementDao(): AchievementDao
     abstract fun emergencyContactDao(): EmergencyContactDao
     abstract fun likeDao(): LikeDao
+    abstract fun weatherDao(): WeatherDao
 
     companion object {
-        const val VERSION = 4
+        const val VERSION = 5
         private const val DB_NAME = "wildtrail.db"
 
         @Volatile

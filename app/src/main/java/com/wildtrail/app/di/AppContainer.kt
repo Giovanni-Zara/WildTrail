@@ -4,22 +4,29 @@ import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.wildtrail.app.BuildConfig
 import com.wildtrail.app.data.local.WildTrailDatabase
 import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.StorageService
+import com.wildtrail.app.data.remote.WeatherApiService
 import com.wildtrail.app.data.repository.AchievementRepository
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.EmergencyContactRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
+import com.wildtrail.app.data.repository.WeatherRepository
 import com.wildtrail.app.util.LocalImageStore
 import com.wildtrail.app.util.LocationTracker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 /**
  * Manual DI container.
@@ -42,6 +49,7 @@ interface AppContainer {
     val socialRepository: SocialRepository
     val achievementRepository: AchievementRepository
     val emergencyContactRepository: EmergencyContactRepository
+    val weatherRepository: WeatherRepository
     val locationTracker: LocationTracker
 }
 
@@ -69,6 +77,23 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val firestore = FirestoreService(FirebaseFirestore.getInstance())
     private val storage = StorageService()
     private val localImageStore = LocalImageStore(context.applicationContext)
+    private val weatherHttpClient = OkHttpClient.Builder()
+        .addInterceptor(
+            HttpLoggingInterceptor().apply {
+                level = if (BuildConfig.DEBUG) {
+                    HttpLoggingInterceptor.Level.BASIC
+                } else {
+                    HttpLoggingInterceptor.Level.NONE
+                }
+            },
+        )
+        .build()
+    private val weatherApiService = Retrofit.Builder()
+        .baseUrl(normalizeBaseUrl(BuildConfig.WEATHER_BACKEND_BASE_URL))
+        .client(weatherHttpClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(WeatherApiService::class.java)
 
     override val authRepository: AuthRepository = AuthRepository(
         authService = authService,
@@ -120,5 +145,16 @@ class DefaultAppContainer(context: Context) : AppContainer {
         externalScope = appScope,
     )
 
+    override val weatherRepository: WeatherRepository = WeatherRepository(
+        weatherApiService = weatherApiService,
+        weatherDao = database.weatherDao(),
+    )
+
     override val locationTracker: LocationTracker = LocationTracker(context)
+
+    private fun normalizeBaseUrl(rawUrl: String): String {
+        val trimmed = rawUrl.trim()
+        if (trimmed.isBlank()) return "https://example.com/"
+        return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
+    }
 }
