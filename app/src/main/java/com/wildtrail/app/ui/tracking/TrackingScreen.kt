@@ -12,15 +12,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,12 +38,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildtrail.app.domain.model.WeatherPoint
+import com.wildtrail.app.domain.model.WeatherSnapshot
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.wildtrail.app.domain.model.SurfaceType
@@ -47,16 +57,28 @@ import com.wildtrail.app.ui.components.RatingRow
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingRoute(
-    viewModel: TrackingViewModel = viewModel(factory = TrackingViewModel.factory()),
+    trackingViewModel: TrackingViewModel = viewModel(factory = TrackingViewModel.factory()),
+    weatherViewModel: WeatherViewModel = viewModel(factory = WeatherViewModel.factory()),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by trackingViewModel.uiState.collectAsStateWithLifecycle()
+    val weatherState by weatherViewModel.uiState.collectAsStateWithLifecycle()
 
     val permissions = rememberMultiplePermissionsState(
         listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
     )
 
     LaunchedEffect(permissions.allPermissionsGranted) {
-        viewModel.onPermissionResult(permissions.allPermissionsGranted)
+        trackingViewModel.onPermissionResult(permissions.allPermissionsGranted)
+    }
+
+    var autoWeatherRefreshDone by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.currentLocation?.lat, state.currentLocation?.lng) {
+        val location = state.currentLocation ?: return@LaunchedEffect
+        weatherViewModel.onCoordinatesUpdated(latitude = location.lat, longitude = location.lng)
+        if (!autoWeatherRefreshDone) {
+            autoWeatherRefreshDone = true
+            weatherViewModel.refreshWeather()
+        }
     }
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -74,6 +96,10 @@ fun TrackingRoute(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            WeatherSummaryCard(
+                state = weatherState,
+                onRefresh = weatherViewModel::refreshWeather,
+            )
             if (!state.hasPermission) {
                 PermissionBanner(onRequest = { permissions.launchMultiplePermissionRequest() })
             }
@@ -101,10 +127,13 @@ fun TrackingRoute(
             ControlButtons(
                 status = state.status,
                 hasPermission = state.hasPermission,
-                onStart = viewModel::start,
-                onPause = viewModel::pause,
-                onResume = viewModel::resume,
-                onStop = viewModel::stop,
+                onStart = {
+                    weatherViewModel.refreshWeather()
+                    trackingViewModel.start()
+                },
+                onPause = trackingViewModel::pause,
+                onResume = trackingViewModel::resume,
+                onStop = trackingViewModel::stop,
             )
             state.errorMessage?.let { msg ->
                 Text(msg, color = MaterialTheme.colorScheme.error)
@@ -116,7 +145,7 @@ fun TrackingRoute(
         SaveHikeDialog(
             distanceKm = state.distanceKm,
             onConfirm = { req ->
-                viewModel.saveHike(
+                trackingViewModel.saveHike(
                     title = req.title,
                     description = req.description,
                     surfaceType = req.surfaceType,
@@ -132,7 +161,7 @@ fun TrackingRoute(
             },
             onDismiss = {
                 showSaveDialog = false
-                viewModel.resetAfterSave()
+                trackingViewModel.resetAfterSave()
             },
         )
     }
@@ -140,7 +169,7 @@ fun TrackingRoute(
     if (state.saved) {
         LaunchedEffect(Unit) {
             kotlinx.coroutines.delay(800)
-            viewModel.resetAfterSave()
+            trackingViewModel.resetAfterSave()
         }
     }
 }
@@ -160,6 +189,181 @@ private fun PermissionBanner(onRequest: () -> Unit) {
             Button(onClick = onRequest) { Text("Grant permission") }
         }
     }
+}
+
+@Composable
+private fun WeatherSummaryCard(
+    state: WeatherUiState,
+    onRefresh: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(start = 10.dp, top = 4.dp, end = 6.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Weather",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(start = 2.dp),
+                )
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(22.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Refresh weather",
+                        modifier = Modifier.size(13.dp),
+                    )
+                }
+            }
+
+            when (state) {
+                is WeatherUiState.Loading -> {
+                    Text(
+                        text = "Loading weather...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    state.lastKnown?.let {
+                        WeatherTriplet(weather = it)
+                    }
+                }
+
+                is WeatherUiState.Success -> {
+                    if (state.fromCache) {
+                        Text(
+                            text = "Cached weather",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    WeatherTriplet(weather = state.weather)
+                }
+
+                is WeatherUiState.Error -> {
+                    Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    state.lastKnown?.let {
+                        WeatherTriplet(weather = it)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeatherTriplet(weather: WeatherSnapshot) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        WeatherPointItem(
+            label = "Now",
+            point = weather.current,
+            modifier = Modifier.weight(1f),
+        )
+        WeatherPointItem(
+            label = "+1h",
+            point = weather.plus1h,
+            modifier = Modifier.weight(1f),
+        )
+        WeatherPointItem(
+            label = "+2h",
+            point = weather.plus2h,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun WeatherPointItem(
+    label: String,
+    point: WeatherPoint,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.height(84.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = weatherEmoji(point.iconId),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "%.0f°".format(point.temperatureC),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = point.description.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase() else it.toString()
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+private fun weatherEmoji(iconId: String): String = when (iconId) {
+    "01d" -> "☀️"
+    "01n" -> "🌙"
+    "02d", "02n" -> "🌤️"
+    "03d", "03n", "04d", "04n" -> "☁️"
+    "09d", "09n" -> "🌧️"
+    "10d" -> "🌦️"
+    "10n" -> "🌧️"
+    "11d", "11n" -> "⛈️"
+    "13d", "13n" -> "❄️"
+    "50d", "50n" -> "🌫️"
+    else -> "🌡️"
 }
 
 @Composable

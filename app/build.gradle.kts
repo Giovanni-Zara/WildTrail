@@ -17,6 +17,8 @@ val localProperties = Properties().apply {
 }
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: ""
 val googleWebClientId: String = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: ""
+val weatherBackendBaseUrl: String =
+    localProperties.getProperty("WEATHER_BACKEND_BASE_URL") ?: "https://example.com/"
 
 android {
     namespace = "com.wildtrail.app"
@@ -41,6 +43,7 @@ android {
         // the Google Sign-In button reads it and shows a setup-required
         // message until you fill in local.properties.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "WEATHER_BACKEND_BASE_URL", "\"$weatherBackendBaseUrl\"")
     }
 
     buildTypes {
@@ -141,6 +144,11 @@ dependencies {
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
+
+    // Networking (weather backend proxy)
+    implementation(libs.retrofit2)
+    implementation(libs.retrofit2.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
 
     // Kotlinx Serialization (for serializing route coords)
     implementation(libs.kotlinx.serialization.json)
