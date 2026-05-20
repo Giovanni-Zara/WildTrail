@@ -1,0 +1,19 @@
+{
+  "mae": 14.404245577044149,
+  "rmse": 25.07968578461205,
+  "r2": 0.9814598249725807,
+  "rows": 30000,
+  "features": [
+    "xp_points",
+    "eta",
+    "past_hikes",
+    "avg_speed",
+    "lunghezza",
+    "elevation_gain",
+    "difficulty",
+    "surface_type_forest",
+    "surface_type_mixed",
+    "surface_type_mountain",
+    "surface_type_road"
+  ]
+}

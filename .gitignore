@@ -38,3 +38,4 @@ app/google-services.json
 
 # Claude Code local workspace
 .claude/
+backend/data/synthetic_hike_dataset.csv
