@@ -9,11 +9,13 @@ import com.wildtrail.app.data.local.WildTrailDatabase
 import com.wildtrail.app.data.remote.FirebaseAuthService
 import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.StorageService
+import com.wildtrail.app.data.remote.HikeApiService
 import com.wildtrail.app.data.remote.WeatherApiService
 import com.wildtrail.app.data.repository.AchievementRepository
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.EmergencyContactRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
+import com.wildtrail.app.data.repository.PredictRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.data.repository.WeatherRepository
@@ -50,6 +52,7 @@ interface AppContainer {
     val achievementRepository: AchievementRepository
     val emergencyContactRepository: EmergencyContactRepository
     val weatherRepository: WeatherRepository
+    val predictRepository: PredictRepository
     val locationTracker: LocationTracker
 }
 
@@ -88,12 +91,19 @@ class DefaultAppContainer(context: Context) : AppContainer {
             },
         )
         .build()
-    private val weatherApiService = Retrofit.Builder()
+    // Both the weather proxy and the ML predict endpoint live on the same
+    // PythonAnywhere server, so we share one Retrofit instance.
+    private val backendRetrofit = Retrofit.Builder()
         .baseUrl(normalizeBaseUrl(BuildConfig.WEATHER_BACKEND_BASE_URL))
         .client(weatherHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-        .create(WeatherApiService::class.java)
+
+    private val weatherApiService: WeatherApiService =
+        backendRetrofit.create(WeatherApiService::class.java)
+
+    private val hikeApiService: HikeApiService =
+        backendRetrofit.create(HikeApiService::class.java)
 
     override val authRepository: AuthRepository = AuthRepository(
         authService = authService,
@@ -148,6 +158,10 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val weatherRepository: WeatherRepository = WeatherRepository(
         weatherApiService = weatherApiService,
         weatherDao = database.weatherDao(),
+    )
+
+    override val predictRepository: PredictRepository = PredictRepository(
+        hikeApiService = hikeApiService,
     )
 
     override val locationTracker: LocationTracker = LocationTracker(context)

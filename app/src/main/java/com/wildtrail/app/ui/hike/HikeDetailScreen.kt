@@ -57,6 +57,7 @@ import com.wildtrail.app.ui.components.EditableStarRow
 import com.wildtrail.app.ui.components.RatingRow
 import com.wildtrail.app.ui.components.StarRow
 import com.wildtrail.app.util.formatHikeDate
+import com.wildtrail.app.util.rememberIsOnline
 import kotlinx.coroutines.launch
 
 @Composable
@@ -67,11 +68,16 @@ fun HikeDetailRoute(
     viewModel: HikeDetailViewModel = viewModel(factory = HikeDetailViewModel.factory(hikeId)),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val predictionState by viewModel.predictionState.collectAsStateWithLifecycle()
+    val isOnline = rememberIsOnline()
     val scope = rememberCoroutineScope()
     HikeDetailContent(
         state = state,
+        predictionState = predictionState,
+        isOnline = isOnline,
         onBack = onBack,
         onUserClick = onUserClick,
+        onPredict = viewModel::requestPrediction,
         onPostComment = viewModel::postComment,
         onSubmitReview = viewModel::submitReview,
         onToggleLike = viewModel::toggleLike,
@@ -83,8 +89,11 @@ fun HikeDetailRoute(
 @Composable
 fun HikeDetailContent(
     state: HikeDetailUiState,
+    predictionState: PredictionState,
+    isOnline: Boolean,
     onBack: () -> Unit,
     onUserClick: (String) -> Unit,
+    onPredict: () -> Unit,
     onPostComment: (String) -> Unit,
     onSubmitReview: (Int, Int, Int, Int, Int, Int, Boolean) -> Unit,
     onToggleLike: () -> Unit,
@@ -154,6 +163,9 @@ fun HikeDetailContent(
                 onUserClick = onUserClick,
                 onPostComment = onPostComment,
                 onSubmitReview = onSubmitReview,
+                predictionState = predictionState,
+                isOnline = isOnline,
+                onPredict = onPredict,
             )
         }
     }
@@ -169,6 +181,9 @@ private fun HikeDetailBody(
     onUserClick: (String) -> Unit,
     onPostComment: (String) -> Unit,
     onSubmitReview: (Int, Int, Int, Int, Int, Int, Boolean) -> Unit,
+    predictionState: PredictionState,
+    isOnline: Boolean,
+    onPredict: () -> Unit,
 ) {
     val hike = state.hike!!
     PullToRefreshBox(
@@ -210,6 +225,13 @@ private fun HikeDetailBody(
                 item { com.wildtrail.app.ui.components.ElevationChart(hike.routeCoordinates) }
             }
             item { HikeStatsCard(hike) }
+            item {
+                PredictionCard(
+                    predictionState = predictionState,
+                    isOnline = isOnline,
+                    onPredict = onPredict,
+                )
+            }
             item { CharacteristicsCard(hike) }
             item { ReviewStatsCard(hike) }
 
@@ -365,6 +387,106 @@ private fun AvatarFromUrl(url: String?, size: androidx.compose.ui.unit.Dp) {
                 modifier = Modifier.size(size),
                 tint = MaterialTheme.colorScheme.primary,
             )
+        }
+    }
+}
+
+/**
+ * Shows the AI prediction feature inside a Card.
+ *
+ * The UI has four visual states driven by [PredictionState]:
+ *
+ *  - [PredictionState.Idle]    → Button "Predict My Time" (disabled if offline)
+ *  - [PredictionState.Loading] → Spinner + "Calculating…" text  (button hidden)
+ *  - [PredictionState.Success] → Estimated time in large text    (button hidden)
+ *  - [PredictionState.Error]   → Error message + "Retry" button
+ *
+ * Behaviour on re-entry: the ViewModel is recreated each time the user navigates
+ * to this screen, so [predictionState] always starts as Idle — the button is
+ * always visible the first time the screen is opened.
+ */
+@Composable
+private fun PredictionCard(
+    predictionState: PredictionState,
+    isOnline: Boolean,
+    onPredict: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("AI Time Forecast", style = MaterialTheme.typography.titleMedium)
+
+            when (predictionState) {
+                PredictionState.Idle -> {
+                    if (!isOnline) {
+                        Text(
+                            "Internet connection required to predict",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = onPredict,
+                        enabled = isOnline,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Predict My Time")
+                    }
+                }
+
+                PredictionState.Loading -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.5.dp,
+                        )
+                        Text(
+                            "Calculating your estimated time…",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                is PredictionState.Success -> {
+                    val totalMinutes = predictionState.minutes
+                    val hours = (totalMinutes / 60).toInt()
+                    val mins  = (totalMinutes % 60).toInt()
+                    val formatted = if (hours > 0) "${hours}h ${mins}min" else "${mins}min"
+
+                    Text(
+                        "Your estimated time:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        formatted,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                is PredictionState.Error -> {
+                    Text(
+                        predictionState.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Button(
+                        onClick = onPredict,
+                        enabled = isOnline,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Retry")
+                    }
+                }
+            }
         }
     }
 }

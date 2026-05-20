@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
+import com.wildtrail.app.data.repository.PredictRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
@@ -17,6 +18,7 @@ import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,27 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+/**
+ * Represents every possible state of the AI time prediction.
+ *
+ * Why a sealed interface?
+ *   It forces the UI to handle every case explicitly (like a type-safe switch).
+ *   The `when` expression in Compose won't compile unless all branches are covered.
+ *
+ * State machine:
+ *   Idle → (button pressed) → Loading → Success(minutes)
+ *                                      → Error(message) → (retry) → Loading
+ *
+ * The state resets to Idle each time the user navigates away and back,
+ * because the ViewModel is recreated with each new navigation back-stack entry.
+ */
+sealed interface PredictionState {
+    data object Idle : PredictionState
+    data object Loading : PredictionState
+    data class Success(val minutes: Double) : PredictionState
+    data class Error(val message: String) : PredictionState
+}
 
 data class HikeDetailUiState(
     /** Distinct from `hike == null` so the UI can tell "still loading" from
@@ -63,7 +86,61 @@ class HikeDetailViewModel(
     private val socialRepository: SocialRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
+    private val predictRepository: PredictRepository,
 ) : ViewModel() {
+
+    // ---------------- Prediction state ------------------------------------
+
+    /**
+     * Holds the current state of the AI prediction (Idle / Loading / Success / Error).
+     *
+     * It is a separate StateFlow from [uiState] so that updating the prediction
+     * does not retrigger the heavy combine() chain that drives the rest of the screen.
+     * The composable collects both flows independently.
+     */
+    private val _predictionState = MutableStateFlow<PredictionState>(PredictionState.Idle)
+    val predictionState: StateFlow<PredictionState> = _predictionState.asStateFlow()
+
+    /**
+     * Called when the user taps "Predict My Time".
+     *
+     * What happens step by step:
+     *  1. We immediately set the state to Loading so the UI shows a spinner.
+     *  2. We fetch the signed-in user's full profile from Room (fast, already cached).
+     *  3. We call [PredictRepository.predict] which sends the HTTP request to Python Anywhere.
+     *  4. On success → state becomes Success(minutes).
+     *     On any failure → state becomes Error with a human-readable message.
+     *
+     * The whole thing runs inside [viewModelScope], which means:
+     *  - It runs on a background thread (never blocks the UI).
+     *  - It is automatically cancelled if the user navigates away mid-request.
+     */
+    fun requestPrediction() {
+        val hike = uiState.value.hike ?: return
+        val uid  = uiState.value.currentUserUid ?: return
+
+        viewModelScope.launch {
+            _predictionState.value = PredictionState.Loading
+
+            // Fetch the current user's profile. Room emits immediately from cache.
+            val user = userRepository.observeUser(uid).first()
+            if (user == null) {
+                _predictionState.value =
+                    PredictionState.Error("Could not load your profile. Please try again.")
+                return@launch
+            }
+
+            predictRepository.predict(user = user, hike = hike).fold(
+                onSuccess = { minutes ->
+                    _predictionState.value = PredictionState.Success(minutes)
+                },
+                onFailure = {
+                    _predictionState.value =
+                        PredictionState.Error("Prediction failed. Check your connection and try again.")
+                },
+            )
+        }
+    }
 
     // ---------------- Side-channel: cached author lookups ----------------
 
@@ -217,6 +294,7 @@ class HikeDetailViewModel(
                     socialRepository = app.container.socialRepository,
                     userRepository = app.container.userRepository,
                     authRepository = app.container.authRepository,
+                    predictRepository = app.container.predictRepository,
                 )
             }
         }
