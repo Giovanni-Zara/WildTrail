@@ -51,6 +51,29 @@ data class HikeLog(
     val waterAvailability: Boolean,
     val averageRating: Float,
     val reviewCount: Int,
+    /** Photos / audio notes captured during the hike, each pinned to the
+     *  GPS position where they were taken. Stored device-locally — files live
+     *  in app-private internal storage so we don't need extra permissions. */
+    val mediaItems: List<HikeMediaItem> = emptyList(),
+)
+
+@Serializable
+enum class HikeMediaType { PHOTO, AUDIO }
+
+/**
+ * A photo or voice note captured during a hike, pinned to the user's GPS
+ * position at the moment of capture. [filePath] is an absolute path to a
+ * file in app-private internal storage (always readable by the app,
+ * survives process death, no extra permissions needed).
+ */
+@Serializable
+data class HikeMediaItem(
+    val id: String,
+    val type: HikeMediaType,
+    val filePath: String,
+    val lat: Double,
+    val lng: Double,
+    val timestamp: Long,
 )
 
 enum class SurfaceType {

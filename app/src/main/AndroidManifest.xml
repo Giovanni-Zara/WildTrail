@@ -19,6 +19,10 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="true" />
 
+    <!-- Microphone for in-hike voice notes -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Vibration for haptic feedback (e.g. fall detection / achievement unlock) -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

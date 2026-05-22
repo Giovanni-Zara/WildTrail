@@ -12,14 +12,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,14 +56,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.wildtrail.app.domain.model.HikeComment
 import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.HikeMediaItem
+import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.User
 import com.wildtrail.app.ui.components.EditableStarRow
 import com.wildtrail.app.ui.components.RatingRow
 import com.wildtrail.app.ui.components.StarRow
+import com.wildtrail.app.util.AudioPlayerController
 import com.wildtrail.app.util.formatHikeDate
+import com.wildtrail.app.util.rememberAudioPlayerController
 import com.wildtrail.app.util.rememberIsOnline
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun HikeDetailRoute(
@@ -219,10 +229,14 @@ private fun HikeDetailBody(
                             modifier = Modifier.fillMaxSize(),
                             follow = false,
                             showCurrentMarker = false,
+                            mediaItems = hike.mediaItems,
                         )
                     }
                 }
                 item { com.wildtrail.app.ui.components.ElevationChart(hike.routeCoordinates) }
+            }
+            if (hike.mediaItems.isNotEmpty()) {
+                item { HikeMediaCard(hike.mediaItems) }
             }
             item { HikeStatsCard(hike) }
             item {
@@ -487,6 +501,79 @@ private fun PredictionCard(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Photos and voice notes the creator captured during the hike, grouped into
+ * a horizontal photo strip and a vertical list of audio notes. The strip
+ * scrolls horizontally so even a long hike's worth of pictures fits on a
+ * single card without overflowing.
+ */
+@Composable
+private fun HikeMediaCard(items: List<HikeMediaItem>) {
+    val photos = items.filter { it.type == HikeMediaType.PHOTO }
+    val audios = items.filter { it.type == HikeMediaType.AUDIO }
+    val audioController = rememberAudioPlayerController()
+
+    Card {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                "Captured on the trail (${items.size})",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (photos.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(photos, key = { it.id }) { photo ->
+                        AsyncImage(
+                            model = File(photo.filePath),
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier
+                                .size(width = 140.dp, height = 140.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                        )
+                    }
+                }
+            }
+            if (audios.isNotEmpty()) {
+                audios.forEach { audio ->
+                    AudioRow(audio = audio, controller = audioController)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AudioRow(audio: HikeMediaItem, controller: AudioPlayerController) {
+    val isPlaying = controller.playingPath == audio.filePath
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        IconButton(onClick = { controller.toggle(audio.filePath) }) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Spacer(Modifier.width(4.dp))
+        Column {
+            Text(
+                "Voice note",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                formatHikeDate(audio.timestamp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

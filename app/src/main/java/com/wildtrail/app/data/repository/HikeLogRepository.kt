@@ -54,7 +54,7 @@ class HikeLogRepository(
         firestore.observePublicHikes(limit.toLong())
             .catch { Log.w(TAG, "Firestore public feed listener errored", it) }
             .onEach { dtos ->
-                hikeLogDao.upsertAll(dtos.map { it.toDomain().toEntity() })
+                hikeLogDao.upsertAll(dtos.map { mergeLocalMedia(it) })
                 backfillCreators(dtos)
             }
             .launchIn(externalScope)
@@ -66,12 +66,24 @@ class HikeLogRepository(
         firestore.observeHikesByCreator(uid)
             .catch { Log.w(TAG, "Firestore my-hikes listener errored", it) }
             .onEach { dtos ->
-                hikeLogDao.upsertAll(dtos.map { it.toDomain().toEntity() })
+                hikeLogDao.upsertAll(dtos.map { mergeLocalMedia(it) })
                 backfillCreators(dtos)
             }
             .launchIn(externalScope)
         return hikeLogDao.observeByCreator(uid).map { list -> list.map { it.toDomain() } }
     }
+
+    /**
+     * Photos and audio notes captured during a hike live in device-local
+     * internal storage — their absolute paths are meaningless on other
+     * devices and so are intentionally never round-tripped through Firestore.
+     * When a Firestore sync hands us a fresh DTO for a hike that *also* has
+     * local media, we keep the local media on the Room row.
+     */
+    private suspend fun mergeLocalMedia(dto: HikeLogDto) =
+        dto.toDomain()
+            .copy(mediaItems = hikeLogDao.getById(dto.hikeId)?.mediaItems ?: emptyList())
+            .toEntity()
 
     fun observeHike(id: String): Flow<HikeLog?> =
         hikeLogDao.observeById(id).map { it?.toDomain() }

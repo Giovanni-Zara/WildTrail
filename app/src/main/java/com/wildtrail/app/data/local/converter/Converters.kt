@@ -3,6 +3,7 @@ package com.wildtrail.app.data.local.converter
 import androidx.room.TypeConverter
 import com.wildtrail.app.domain.model.AchievementCategory
 import com.wildtrail.app.domain.model.GeoPoint
+import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.SurfaceType
 import kotlinx.serialization.builtins.ListSerializer
@@ -36,6 +37,20 @@ object Converters {
     @JvmStatic
     fun jsonToGeoPointList(value: String): List<GeoPoint> =
         json.decodeFromString(ListSerializer(GeoPoint.serializer()), value)
+
+    // ---- List<HikeMediaItem> <-> JSON -----------------------------------
+
+    @TypeConverter
+    @JvmStatic
+    fun mediaItemListToJson(value: List<HikeMediaItem>): String =
+        json.encodeToString(ListSerializer(HikeMediaItem.serializer()), value)
+
+    @TypeConverter
+    @JvmStatic
+    fun jsonToMediaItemList(value: String): List<HikeMediaItem> =
+        runCatching {
+            json.decodeFromString(ListSerializer(HikeMediaItem.serializer()), value)
+        }.getOrDefault(emptyList())
 
     // ---- List<String> <-> JSON ------------------------------------------
 
