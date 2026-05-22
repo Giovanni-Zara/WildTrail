@@ -37,6 +37,11 @@ datastore = "1.1.1"
 # Coil image loading
 coil = "2.7.0"
 
+# Google ML Kit — on-device, free, no API key. Image labeling labels what's
+# in a photo (animal / plant / monument / object), used by the in-hike
+# "AI photo description" feature.
+mlkitImageLabeling = "17.0.9"
+
 # Google Maps Compose (for displaying routes)
 mapsCompose = "6.4.0"
 playServicesMaps = "19.0.0"
@@ -126,6 +131,9 @@ firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics
 
 # Coil
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# ML Kit Image Labeling (bundled, on-device)
+mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", version.ref = "mlkitImageLabeling" }
 
 # Maps + Location
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }

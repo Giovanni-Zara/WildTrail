@@ -125,18 +125,28 @@ fun RouteMap(
             }
         }
         // Photo / audio note pins, colour-coded so it's obvious at a glance
-        // which captured items are where on the route.
-        mediaItems.forEach { media ->
+        // which captured items are where on the route. We number them in
+        // chronological order — per type — so the user can tell "Photo 1"
+        // from "Photo 2" when several were taken on the same hike.
+        val orderedMedia = remember(mediaItems) { mediaItems.sortedBy { it.timestamp } }
+        var photoCount = 0
+        var audioCount = 0
+        orderedMedia.forEach { media ->
+            val n = when (media.type) {
+                HikeMediaType.PHOTO -> ++photoCount
+                HikeMediaType.AUDIO -> ++audioCount
+            }
             val hue = when (media.type) {
                 HikeMediaType.PHOTO -> BitmapDescriptorFactory.HUE_AZURE
                 HikeMediaType.AUDIO -> BitmapDescriptorFactory.HUE_ORANGE
             }
+            val label = when (media.type) {
+                HikeMediaType.PHOTO -> "Photo $n"
+                HikeMediaType.AUDIO -> "Voice $n"
+            }
             Marker(
                 state = MarkerState(position = LatLng(media.lat, media.lng)),
-                title = when (media.type) {
-                    HikeMediaType.PHOTO -> "Photo"
-                    HikeMediaType.AUDIO -> "Voice note"
-                },
+                title = label,
                 icon = BitmapDescriptorFactory.defaultMarker(hue),
             )
         }
