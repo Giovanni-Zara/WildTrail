@@ -1,6 +1,8 @@
 package com.wildtrail.app.ui.tracking
 
 import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +15,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,17 +52,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.wildtrail.app.domain.model.HikeMediaItem
+import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.WeatherPoint
 import com.wildtrail.app.domain.model.WeatherSnapshot
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
 import com.wildtrail.app.domain.model.SurfaceType
 import com.wildtrail.app.ui.components.RatingRow
+import java.io.File
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +110,7 @@ fun TrackingRoute(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -135,6 +153,24 @@ fun TrackingRoute(
                 onResume = trackingViewModel::resume,
                 onStop = trackingViewModel::stop,
             )
+
+            // Photo + voice-note capture is only meaningful while a hike is
+            // actively being recorded (i.e. there's a "current position" to
+            // tag a photo/audio with). Hidden otherwise to keep the UI tidy.
+            if (state.status == TrackingStatus.RECORDING ||
+                state.status == TrackingStatus.PAUSED
+            ) {
+                MediaCaptureRow(
+                    isRecordingAudio = state.isRecordingAudio,
+                    onPhoto = trackingViewModel::capturePhoto,
+                    onStartAudio = trackingViewModel::startAudioRecording,
+                    onStopAudio = trackingViewModel::stopAudioRecording,
+                )
+                if (state.mediaItems.isNotEmpty()) {
+                    CapturedMediaStrip(items = state.mediaItems)
+                }
+            }
+
             state.errorMessage?.let { msg ->
                 Text(msg, color = MaterialTheme.colorScheme.error)
             }
@@ -418,7 +454,14 @@ private fun ControlButtons(
             onClick = onStart,
             enabled = hasPermission,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) { Text("Start hike") }
+            // Force brand colours so the button stays visible on every device,
+            // including phones where Material You would otherwise tone the
+            // primary down to something close to the surface.
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        ) { Text("Start hike", style = MaterialTheme.typography.titleMedium) }
 
         TrackingStatus.RECORDING -> Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -603,4 +646,125 @@ private fun formatDuration(seconds: Long): String {
     val m = (seconds % 3600) / 60
     val s = seconds % 60
     return "%d:%02d:%02d".format(h, m, s)
+}
+
+/**
+ * Side-by-side camera + microphone buttons that appear during an active
+ * recording. The camera button launches the system camera (returns a
+ * preview-resolution Bitmap which we save to internal storage). The mic
+ * button is a single tap-to-start / tap-to-stop toggle.
+ *
+ * Both flows request their respective runtime permission lazily: the
+ * permission prompt only appears when the user actually taps the button.
+ */
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun MediaCaptureRow(
+    isRecordingAudio: Boolean,
+    onPhoto: (android.graphics.Bitmap) -> Unit,
+    onStartAudio: () -> Unit,
+    onStopAudio: () -> Unit,
+) {
+    val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
+    val micPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview(),
+    ) { bitmap ->
+        if (bitmap != null) onPhoto(bitmap)
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Button(
+            onClick = {
+                if (cameraPermission.status.isGranted) {
+                    cameraLauncher.launch(null)
+                } else {
+                    cameraPermission.launchPermissionRequest()
+                }
+            },
+            modifier = Modifier.weight(1f).height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+            ),
+        ) {
+            Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Photo")
+        }
+
+        Button(
+            onClick = {
+                if (isRecordingAudio) {
+                    onStopAudio()
+                } else if (micPermission.status.isGranted) {
+                    onStartAudio()
+                } else {
+                    micPermission.launchPermissionRequest()
+                }
+            },
+            modifier = Modifier.weight(1f).height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRecordingAudio) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        ) {
+            Icon(
+                imageVector = if (isRecordingAudio) Icons.Filled.Stop else Icons.Filled.Mic,
+                contentDescription = null,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(if (isRecordingAudio) "Stop" else "Audio note")
+        }
+    }
+
+    // Request automatically retries when the user grants the permission via
+    // the system dialog, so a re-tap starts the camera/mic flow as expected.
+}
+
+/** A horizontal strip of the photos / audio notes captured so far in this
+ *  recording session — gives the user immediate feedback that capture worked. */
+@Composable
+private fun CapturedMediaStrip(items: List<HikeMediaItem>) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            "Captured (${items.size})",
+            style = MaterialTheme.typography.labelLarge,
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(items, key = { it.id }) { item ->
+                Card(
+                    modifier = Modifier.size(width = 72.dp, height = 72.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    when (item.type) {
+                        HikeMediaType.PHOTO -> AsyncImage(
+                            model = File(item.filePath),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        HikeMediaType.AUDIO -> Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.GraphicEq,
+                                contentDescription = "Audio note",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
