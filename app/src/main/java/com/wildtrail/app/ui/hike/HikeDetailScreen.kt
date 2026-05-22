@@ -1,12 +1,16 @@
 package com.wildtrail.app.ui.hike
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,11 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
@@ -49,11 +55,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.wildtrail.app.WildTrailApp
 import com.wildtrail.app.domain.model.HikeComment
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.HikeMediaItem
@@ -64,6 +75,7 @@ import com.wildtrail.app.ui.components.EditableStarRow
 import com.wildtrail.app.ui.components.RatingRow
 import com.wildtrail.app.ui.components.StarRow
 import com.wildtrail.app.util.AudioPlayerController
+import com.wildtrail.app.util.PhotoDescriber
 import com.wildtrail.app.util.formatHikeDate
 import com.wildtrail.app.util.rememberAudioPlayerController
 import com.wildtrail.app.util.rememberIsOnline
@@ -513,9 +525,17 @@ private fun PredictionCard(
  */
 @Composable
 private fun HikeMediaCard(items: List<HikeMediaItem>) {
+    // Chronological order keeps the on-card photo strip aligned with the
+    // numbered "Photo 1", "Photo 2" map pins.
     val photos = items.filter { it.type == HikeMediaType.PHOTO }
+        .sortedBy { it.timestamp }
     val audios = items.filter { it.type == HikeMediaType.AUDIO }
+        .sortedBy { it.timestamp }
     val audioController = rememberAudioPlayerController()
+
+    // Currently-expanded photo, if any. Tapping a thumbnail opens the
+    // full-screen viewer with an AI photo description.
+    var openedPhotoIndex by remember { mutableStateOf<Int?>(null) }
 
     Card {
         Column(
@@ -528,21 +548,174 @@ private fun HikeMediaCard(items: List<HikeMediaItem>) {
             )
             if (photos.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(photos, key = { it.id }) { photo ->
-                        AsyncImage(
-                            model = File(photo.filePath),
-                            contentDescription = null,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            modifier = Modifier
-                                .size(width = 140.dp, height = 140.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                    itemsIndexed(photos, key = { _, p -> p.id }) { index, photo ->
+                        PhotoThumbnail(
+                            photo = photo,
+                            number = index + 1,
+                            onClick = { openedPhotoIndex = index },
                         )
                     }
                 }
             }
             if (audios.isNotEmpty()) {
-                audios.forEach { audio ->
-                    AudioRow(audio = audio, controller = audioController)
+                audios.forEachIndexed { index, audio ->
+                    AudioRow(audio = audio, number = index + 1, controller = audioController)
+                }
+            }
+        }
+    }
+
+    openedPhotoIndex?.let { idx ->
+        PhotoViewerDialog(
+            photo = photos[idx],
+            number = idx + 1,
+            onDismiss = { openedPhotoIndex = null },
+        )
+    }
+}
+
+@Composable
+private fun PhotoThumbnail(
+    photo: HikeMediaItem,
+    number: Int,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(width = 140.dp, height = 140.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+    ) {
+        AsyncImage(
+            model = File(photo.filePath),
+            contentDescription = "Photo $number",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        // Small badge so the user can match a thumbnail to its map marker.
+        Text(
+            "Photo $number",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(topEnd = 8.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
+}
+
+/**
+ * Full-screen viewer for a single hike photo. Triggers an on-device ML Kit
+ * label pass when opened and shows the resulting "Looks like: …" sentence
+ * below the image. No network or API key is involved.
+ */
+@Composable
+private fun PhotoViewerDialog(
+    photo: HikeMediaItem,
+    number: Int,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val describer: PhotoDescriber = remember {
+        (context.applicationContext as WildTrailApp).container.photoDescriber
+    }
+
+    var description by remember(photo.id) { mutableStateOf<String?>(null) }
+    var failed by remember(photo.id) { mutableStateOf(false) }
+
+    LaunchedEffect(photo.id) {
+        description = null
+        failed = false
+        runCatching { describer.describe(File(photo.filePath)) }
+            .onSuccess { description = it }
+            .onFailure { failed = true }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.92f)),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Photo $number · ${formatHikeDate(photo.timestamp)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                        )
+                    }
+                }
+
+                AsyncImage(
+                    model = File(photo.filePath),
+                    contentDescription = "Photo $number",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            "AI photo description",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        when {
+                            description != null -> Text(
+                                description!!,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            failed -> Text(
+                                "Couldn't analyse this photo.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            else -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Analysing…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                        Text(
+                            "Location: %.5f, %.5f".format(photo.lat, photo.lng),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -550,7 +723,7 @@ private fun HikeMediaCard(items: List<HikeMediaItem>) {
 }
 
 @Composable
-private fun AudioRow(audio: HikeMediaItem, controller: AudioPlayerController) {
+private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerController) {
     val isPlaying = controller.playingPath == audio.filePath
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -566,7 +739,7 @@ private fun AudioRow(audio: HikeMediaItem, controller: AudioPlayerController) {
         Spacer(Modifier.width(4.dp))
         Column {
             Text(
-                "Voice note",
+                "Voice $number",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(

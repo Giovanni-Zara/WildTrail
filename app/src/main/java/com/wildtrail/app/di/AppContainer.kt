@@ -22,6 +22,7 @@ import com.wildtrail.app.data.repository.WeatherRepository
 import com.wildtrail.app.util.HikeMediaStore
 import com.wildtrail.app.util.LocalImageStore
 import com.wildtrail.app.util.LocationTracker
+import com.wildtrail.app.util.PhotoDescriber
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ interface AppContainer {
     val predictRepository: PredictRepository
     val locationTracker: LocationTracker
     val hikeMediaStore: HikeMediaStore
+    val photoDescriber: PhotoDescriber
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -169,6 +171,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val locationTracker: LocationTracker = LocationTracker(context)
 
     override val hikeMediaStore: HikeMediaStore = HikeMediaStore(context.applicationContext)
+
+    override val photoDescriber: PhotoDescriber = PhotoDescriber()
 
     private fun normalizeBaseUrl(rawUrl: String): String {
         val trimmed = rawUrl.trim()
