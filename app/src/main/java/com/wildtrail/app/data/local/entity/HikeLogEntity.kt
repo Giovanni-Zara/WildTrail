@@ -5,6 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.SurfaceType
 
 /**
@@ -51,6 +52,7 @@ data class HikeLogEntity(
     val waterAvailability: Boolean,
     val averageRating: Float,
     val reviewCount: Int,
+    val mediaItems: List<HikeMediaItem> = emptyList(),
 )
 
 fun HikeLogEntity.toDomain(): HikeLog = HikeLog(
@@ -83,6 +85,7 @@ fun HikeLogEntity.toDomain(): HikeLog = HikeLog(
     waterAvailability = waterAvailability,
     averageRating = averageRating,
     reviewCount = reviewCount,
+    mediaItems = mediaItems,
 )
 
 fun HikeLog.toEntity(): HikeLogEntity = HikeLogEntity(
@@ -115,4 +118,5 @@ fun HikeLog.toEntity(): HikeLogEntity = HikeLogEntity(
     waterAvailability = waterAvailability,
     averageRating = averageRating,
     reviewCount = reviewCount,
+    mediaItems = mediaItems,
 )

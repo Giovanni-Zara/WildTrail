@@ -18,11 +18,14 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.wildtrail.app.domain.model.GeoPoint
+import com.wildtrail.app.domain.model.HikeMediaItem
+import com.wildtrail.app.domain.model.HikeMediaType
 
 /**
  * Reusable Google Map that draws a hike route as a [Polyline].
@@ -43,6 +46,7 @@ fun RouteMap(
     follow: Boolean = false,
     showCurrentMarker: Boolean = false,
     currentLocation: GeoPoint? = null,
+    mediaItems: List<HikeMediaItem> = emptyList(),
 ) {
     if (points.isEmpty() && currentLocation == null) {
         // No route and no fix yet. We still take up the requested size so
@@ -119,6 +123,32 @@ fun RouteMap(
             (latLngs.lastOrNull() ?: currentLatLng)?.let { current ->
                 Marker(state = MarkerState(position = current), title = "You")
             }
+        }
+        // Photo / audio note pins, colour-coded so it's obvious at a glance
+        // which captured items are where on the route. We number them in
+        // chronological order — per type — so the user can tell "Photo 1"
+        // from "Photo 2" when several were taken on the same hike.
+        val orderedMedia = remember(mediaItems) { mediaItems.sortedBy { it.timestamp } }
+        var photoCount = 0
+        var audioCount = 0
+        orderedMedia.forEach { media ->
+            val n = when (media.type) {
+                HikeMediaType.PHOTO -> ++photoCount
+                HikeMediaType.AUDIO -> ++audioCount
+            }
+            val hue = when (media.type) {
+                HikeMediaType.PHOTO -> BitmapDescriptorFactory.HUE_AZURE
+                HikeMediaType.AUDIO -> BitmapDescriptorFactory.HUE_ORANGE
+            }
+            val label = when (media.type) {
+                HikeMediaType.PHOTO -> "Photo $n"
+                HikeMediaType.AUDIO -> "Voice $n"
+            }
+            Marker(
+                state = MarkerState(position = LatLng(media.lat, media.lng)),
+                title = label,
+                icon = BitmapDescriptorFactory.defaultMarker(hue),
+            )
         }
     }
 }

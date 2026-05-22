@@ -140,6 +140,11 @@ dependencies {
     // Coil image loading
     implementation(libs.coil.compose)
 
+    // Google ML Kit — on-device image labeling used by the AI photo
+    // description feature on the hike-detail screen. Runs entirely on the
+    // phone, no API key, no network.
+    implementation(libs.mlkit.image.labeling)
+
     // Maps + Location
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)

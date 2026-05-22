@@ -72,7 +72,7 @@ abstract class WildTrailDatabase : RoomDatabase() {
     abstract fun weatherDao(): WeatherDao
 
     companion object {
-        const val VERSION = 5
+        const val VERSION = 6
         private const val DB_NAME = "wildtrail.db"
 
         @Volatile

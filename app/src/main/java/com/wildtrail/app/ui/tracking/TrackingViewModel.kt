@@ -1,5 +1,6 @@
 package com.wildtrail.app.ui.tracking
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,16 +13,22 @@ import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.HikeMediaItem
+import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.SurfaceType
+import com.wildtrail.app.util.AudioRecorder
 import com.wildtrail.app.util.HikeMath
+import com.wildtrail.app.util.HikeMediaStore
 import com.wildtrail.app.util.LocationTracker
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -44,6 +51,11 @@ data class TrackingUiState(
     /** Latest GPS fix, tracked even before "Start hike" so the map can
      *  center on the user instead of showing a "waiting for GPS" box. */
     val currentLocation: GeoPoint? = null,
+    /** Photos / voice notes captured during the current session. Persisted
+     *  onto the hike when the user saves; cleared if they discard. */
+    val mediaItems: List<HikeMediaItem> = emptyList(),
+    /** True while [AudioRecorder] is active — drives the UI button state. */
+    val isRecordingAudio: Boolean = false,
 )
 
 enum class TrackingStatus { IDLE, RECORDING, PAUSED, STOPPED }
@@ -53,6 +65,8 @@ class TrackingViewModel(
     private val hikeLogRepository: HikeLogRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
+    private val mediaStore: HikeMediaStore,
+    private val audioRecorder: AudioRecorder,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrackingUiState())
@@ -204,6 +218,7 @@ class TrackingViewModel(
             waterAvailability = waterAvailability,
             averageRating = 0f,
             reviewCount = 0,
+            mediaItems = state.mediaItems,
             )
             runCatching {
                 hikeLogRepository.saveHike(hike)
@@ -227,9 +242,70 @@ class TrackingViewModel(
     }
 
     fun resetAfterSave() {
+        // If the user discarded mid-recording with an active audio capture,
+        // make sure the MediaRecorder is released so the mic isn't held.
+        if (_uiState.value.isRecordingAudio) runCatching { audioRecorder.stop() }
         val granted = locationTracker.hasLocationPermission()
         _uiState.value = TrackingUiState(hasPermission = granted)
         if (granted) startLocationPreview()
+    }
+
+    // ---------------- Sensor capture: photos & audio --------------------
+
+    /**
+     * Persist a photo taken from the system camera and tag it with the user's
+     * current GPS position so it can be pinned on the map when the hike is
+     * later viewed.
+     */
+    fun capturePhoto(bitmap: Bitmap) {
+        val location = _uiState.value.currentLocation ?: run {
+            _uiState.update { it.copy(errorMessage = "No GPS fix yet — try again in a moment") }
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                val file = mediaStore.savePhoto(bitmap)
+                addMediaItem(HikeMediaType.PHOTO, file.absolutePath, location)
+            }.onFailure { err ->
+                _uiState.update { it.copy(errorMessage = err.message ?: "Could not save photo") }
+            }
+        }
+    }
+
+    /** Begin recording audio from the device microphone. */
+    fun startAudioRecording() {
+        if (_uiState.value.isRecordingAudio) return
+        val target = mediaStore.newAudioFile()
+        runCatching { audioRecorder.start(target) }
+            .onSuccess { _uiState.update { it.copy(isRecordingAudio = true) } }
+            .onFailure { err ->
+                _uiState.update { it.copy(errorMessage = err.message ?: "Could not start recording") }
+            }
+    }
+
+    /** Stop the in-flight audio recording and tag the resulting file. */
+    fun stopAudioRecording() {
+        if (!_uiState.value.isRecordingAudio) return
+        viewModelScope.launch {
+            val file = withContext(Dispatchers.IO) { audioRecorder.stop() }
+            _uiState.update { it.copy(isRecordingAudio = false) }
+            val location = _uiState.value.currentLocation
+            if (file != null && location != null) {
+                addMediaItem(HikeMediaType.AUDIO, file.absolutePath, location)
+            }
+        }
+    }
+
+    private fun addMediaItem(type: HikeMediaType, path: String, location: GeoPoint) {
+        val item = HikeMediaItem(
+            id = UUID.randomUUID().toString(),
+            type = type,
+            filePath = path,
+            lat = location.lat,
+            lng = location.lng,
+            timestamp = System.currentTimeMillis(),
+        )
+        _uiState.update { it.copy(mediaItems = it.mediaItems + item) }
     }
 
     private fun beginCollecting() {
@@ -280,6 +356,8 @@ class TrackingViewModel(
                     hikeLogRepository = app.container.hikeLogRepository,
                     userRepository = app.container.userRepository,
                     authRepository = app.container.authRepository,
+                    mediaStore = app.container.hikeMediaStore,
+                    audioRecorder = AudioRecorder(app.applicationContext),
                 )
             }
         }

@@ -47,14 +47,15 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * Top-level theme wrapper. Dynamic colour (Material You) is enabled on
- * Android 12+ — the OS hands us a palette derived from the user's wallpaper.
- * On older devices we fall back to our static brand palette.
+ * Top-level theme wrapper. We default to the WildTrail brand palette so
+ * branded controls (Start hike, etc.) keep a consistent forest-green look
+ * on every device. Material You / dynamic colour can be re-enabled by
+ * passing `dynamicColor = true`.
  */
 @Composable
 fun WildTrailTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
