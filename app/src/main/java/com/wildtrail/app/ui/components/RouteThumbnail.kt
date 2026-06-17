@@ -1,35 +1,48 @@
 package com.wildtrail.app.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.compose.CameraPositionState
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Polyline
 import com.wildtrail.app.domain.model.GeoPoint
+import kotlin.math.PI
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 
 /**
- * Lightweight, list-friendly preview of a hike's GPS route.
+ * List-friendly preview of a hike's GPS route, drawn over a **static map
+ * background** for geographic context.
  *
- * Why not just embed a Google Map for every card?
- *  - Each [com.google.maps.android.compose.GoogleMap] allocates a fairly
- *    heavy SurfaceView; rendering 20+ in a LazyColumn drops frames hard
- *    on mid-range phones.
- *  - We don't actually need tiles for a thumbnail — the *shape* of the
- *    route is what tells you "this looks like a loop", "this is a
- *    summit-and-return", etc.
+ * It uses the Google Maps **lite mode**: the map renders as a single static
+ * bitmap with no gesture handling, which is the approach Google recommends for
+ * showing many maps in a scrolling list (a full interactive
+ * [com.google.maps.android.compose.GoogleMap] allocates a heavy SurfaceView and
+ * janks badly with 20+ in a LazyColumn). The interactive, zoomable map lives on
+ * the full hike-detail screen ([RouteMap]); this preview is intentionally fixed.
  *
- * So we draw the polyline ourselves on a [Canvas], normalising the
- * lat/lng range to fit the box with a small padding. Cheap, scrolls at
- * 60 fps even with many cards.
+ * The camera (centre + zoom) is computed once from the route's bounding box and
+ * the thumbnail's pixel size so the **entire segment is always framed** with a
+ * little padding — never cropped, never interactive.
  */
 @Composable
 fun RouteThumbnail(
@@ -39,53 +52,89 @@ fun RouteThumbnail(
     val brand = Color(0xFF2E5D3A)
     val backdrop = MaterialTheme.colorScheme.surfaceVariant
 
-    Canvas(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(backdrop),
-    ) {
-        if (points.size < 2) return@Canvas
+    BoxWithConstraints(modifier = modifier.clip(RoundedCornerShape(8.dp))) {
+        val latLngs = remember(points) { points.map { LatLng(it.lat, it.lng) } }
 
-        val padding = 8f
-        val w = size.width - padding * 2
-        val h = size.height - padding * 2
-
-        val minLat = points.minOf { it.lat }
-        val maxLat = points.maxOf { it.lat }
-        val minLng = points.minOf { it.lng }
-        val maxLng = points.maxOf { it.lng }
-
-        // Guard against a degenerate bounding box (single point repeated).
-        val latSpan = (maxLat - minLat).takeIf { it > 0.0 } ?: 1e-6
-        val lngSpan = (maxLng - minLng).takeIf { it > 0.0 } ?: 1e-6
-
-        fun project(p: GeoPoint): Offset {
-            // Y axis inverted: higher lat → top of the canvas (smaller y).
-            val x = padding + ((p.lng - minLng) / lngSpan).toFloat() * w
-            val y = padding + (1f - ((p.lat - minLat) / latSpan).toFloat()) * h
-            return Offset(x, y)
+        // Degenerate route (caller normally guards size >= 2): just show the
+        // neutral backdrop rather than a misframed world map.
+        if (latLngs.size < 2 || !constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+            Box(Modifier.fillMaxSize().background(backdrop))
+            return@BoxWithConstraints
         }
 
-        val path = Path().apply {
-            val first = project(points.first())
-            moveTo(first.x, first.y)
-            for (i in 1 until points.size) {
-                val p = project(points[i])
-                lineTo(p.x, p.y)
-            }
+        val widthPx = constraints.maxWidth
+        val heightPx = constraints.maxHeight
+
+        val camera = remember(latLngs, widthPx, heightPx) {
+            val bounds = LatLngBounds.Builder().apply { latLngs.forEach { include(it) } }.build()
+            CameraPosition.fromLatLngZoom(bounds.center, boundsZoom(bounds, widthPx, heightPx))
         }
 
-        // Subtle shadow stroke under the main line for legibility on busy
-        // card backgrounds.
-        drawPath(
-            path,
-            color = Color.Black.copy(alpha = 0.15f),
-            style = Stroke(width = 6f, cap = StrokeCap.Round),
-        )
-        drawPath(
-            path,
-            color = brand,
-            style = Stroke(width = 4f, cap = StrokeCap.Round),
-        )
+        // Keyed on the computed camera so a recycled list slot reused for a
+        // different hike always renders that hike's viewport, never a stale one.
+        val cameraPositionState = remember(camera) { CameraPositionState(position = camera) }
+
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) },
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(mapType = MapType.NORMAL),
+            uiSettings = NonInteractiveUiSettings,
+        ) {
+            // White casing under the brand line keeps the route legible over
+            // busy map tiles (the standard cartographic "route" treatment).
+            Polyline(points = latLngs, color = Color.White, width = 10f)
+            Polyline(points = latLngs, color = brand, width = 6f)
+        }
     }
+}
+
+/** Every gesture and control disabled — a fixed, non-interactive map. */
+private val NonInteractiveUiSettings = MapUiSettings(
+    compassEnabled = false,
+    indoorLevelPickerEnabled = false,
+    mapToolbarEnabled = false,
+    myLocationButtonEnabled = false,
+    rotationGesturesEnabled = false,
+    scrollGesturesEnabled = false,
+    scrollGesturesEnabledDuringRotateOrZoom = false,
+    tiltGesturesEnabled = false,
+    zoomControlsEnabled = false,
+    zoomGesturesEnabled = false,
+)
+
+private const val WORLD_PX = 256.0
+private const val MAX_ZOOM = 19.0
+
+/** Leaves ~22% margin so the route sits comfortably inside the frame. */
+private const val PADDING_FACTOR = 0.78
+
+/**
+ * Smallest zoom at which [bounds] fits inside a [widthPx] × [heightPx] viewport,
+ * using the standard Web-Mercator "fit bounds" derivation. Returns a fixed
+ * zoom suitable for a non-interactive snapshot.
+ */
+private fun boundsZoom(bounds: LatLngBounds, widthPx: Int, heightPx: Int): Float {
+    val ne = bounds.northeast
+    val sw = bounds.southwest
+
+    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / PI
+    val lngDiff = ne.longitude - sw.longitude
+    val lngFraction = (if (lngDiff < 0) lngDiff + 360.0 else lngDiff) / 360.0
+
+    // A span of ~0 in one axis (single point, or a perfectly straight N-S/E-W
+    // trace) would blow up the log; fall back to the max zoom for that axis.
+    val latZoom = if (latFraction <= 0.0) MAX_ZOOM else zoomFor(heightPx * PADDING_FACTOR, latFraction)
+    val lngZoom = if (lngFraction <= 0.0) MAX_ZOOM else zoomFor(widthPx * PADDING_FACTOR, lngFraction)
+
+    return minOf(latZoom, lngZoom, MAX_ZOOM).coerceIn(2.0, MAX_ZOOM).toFloat()
+}
+
+private fun zoomFor(mapPx: Double, fraction: Double): Double =
+    ln(mapPx / WORLD_PX / fraction) / ln(2.0)
+
+private fun latRad(latDeg: Double): Double {
+    val s = sin(latDeg * PI / 180.0)
+    val radX2 = ln((1 + s) / (1 - s)) / 2.0
+    return max(min(radX2, PI), -PI) / 2.0
 }

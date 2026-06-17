@@ -167,7 +167,7 @@ fun HikeCard(
                     points = hike.routeCoordinates,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp),
+                        .height(175.dp),
                 )
             }
 
@@ -214,7 +214,6 @@ fun HikeCard(
                 CharChip("Diff ${hike.difficultyLevel}/5")
                 CharChip("Mud ${hike.mudRisk}/5")
                 CharChip("Path ${hike.pathClarity}/5")
-                CharChip(if (hike.waterAvailability) "💧 Water" else "🚱 No water")
                 CharChip(hike.surfaceType.shortLabel())
             }
         }
