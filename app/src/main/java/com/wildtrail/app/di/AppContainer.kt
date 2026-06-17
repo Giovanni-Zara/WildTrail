@@ -1,6 +1,7 @@
 package com.wildtrail.app.di
 
 import android.content.Context
+import android.hardware.SensorManager
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,6 +17,7 @@ import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.EmergencyContactRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.PredictRepository
+import com.wildtrail.app.data.repository.SensorRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.data.repository.WeatherRepository
@@ -55,6 +57,7 @@ interface AppContainer {
     val emergencyContactRepository: EmergencyContactRepository
     val weatherRepository: WeatherRepository
     val predictRepository: PredictRepository
+    val sensorRepository: SensorRepository
     val locationTracker: LocationTracker
     val hikeMediaStore: HikeMediaStore
     val photoDescriber: PhotoDescriber
@@ -166,6 +169,10 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     override val predictRepository: PredictRepository = PredictRepository(
         hikeApiService = hikeApiService,
+    )
+
+    override val sensorRepository: SensorRepository = SensorRepository(
+        context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager,
     )
 
     override val locationTracker: LocationTracker = LocationTracker(context)

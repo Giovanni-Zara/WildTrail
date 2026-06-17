@@ -1,6 +1,7 @@
 package com.wildtrail.app.ui.tracking
 
 import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,6 +88,24 @@ fun TrackingRoute(
 
     LaunchedEffect(permissions.allPermissionsGranted) {
         trackingViewModel.onPermissionResult(permissions.allPermissionsGranted)
+    }
+
+    // One-shot tracking events. The emergency overlay's *visibility* is driven
+    // by state (below); these events cover transient signals like the
+    // placeholder "call placed" Toast.
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        trackingViewModel.events.collect { event ->
+            when (event) {
+                TrackingEvent.ShowEmergencyOverlay -> Unit
+                is TrackingEvent.EmergencyCallPlaced ->
+                    Toast.makeText(
+                        context,
+                        "Emergency Call Initiated to ${event.contactName}",
+                        Toast.LENGTH_LONG,
+                    ).show()
+            }
+        }
     }
 
     var autoWeatherRefreshDone by rememberSaveable { mutableStateOf(false) }
@@ -207,6 +227,18 @@ fun TrackingRoute(
             kotlinx.coroutines.delay(800)
             trackingViewModel.resetAfterSave()
         }
+    }
+
+    // Full-screen emergency overlay, shown above everything (incl. the bottom
+    // bar) whenever a fall has been confirmed. Visibility is state-driven so it
+    // survives recomposition / rotation.
+    state.emergency?.let { emergency ->
+        EmergencyOverlay(
+            contactName = emergency.contactName,
+            countdownSeconds = emergency.countdownSeconds,
+            onCancel = trackingViewModel::onEmergencyCancelled,
+            onCountdownFinished = trackingViewModel::onEmergencyCountdownFinished,
+        )
     }
 }
 

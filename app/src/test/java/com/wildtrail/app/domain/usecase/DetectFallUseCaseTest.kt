@@ -1,0 +1,140 @@
+package com.wildtrail.app.domain.usecase
+
+import com.wildtrail.app.data.repository.SensorRepository
+import com.wildtrail.app.domain.model.AccelReading
+import com.wildtrail.app.domain.model.SensorSample
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Unit tests for [DetectFallUseCase]'s detection logic, in isolation.
+ *
+ * The two sensor streams are fed as synthetic flows whose emissions are spaced
+ * out with [delay] keyed off each sample's absolute timestamp, so under
+ * `runTest`'s virtual clock the use case's internal `merge` sees the readings
+ * in true time order — fully deterministic, no real waiting. The use case's
+ * processing dispatcher is the same [StandardTestDispatcher], so its `flowOn`
+ * shares that virtual clock.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class DetectFallUseCaseTest {
+
+    private val gravity = 9.81f
+
+    @Test
+    fun `confirms a real fall - impact then rotation then stillness`() = runTest {
+        val accel = listOf(
+            accelG(3.0f, atMs = 0),      // impact spike (> 2.5g)
+            accelG(1.0f, atMs = 100),    // at rest: gravity only (< 1.2g)
+            accelG(1.0f, atMs = 1_000),
+            accelG(1.0f, atMs = 3_100),  // > 3s of stillness since rotation
+        )
+        val gyro = listOf(
+            gyro(10f, atMs = 20),        // ~11 deg/step; crosses 30 deg...
+            gyro(10f, atMs = 40),
+            gyro(10f, atMs = 60),        // ...here, within 1s of impact
+        )
+
+        val events = collectFalls(accel, gyro, StandardTestDispatcher(testScheduler))
+
+        assertEquals(1, events.size)
+        assertTrue(events.single() is FallDetectionEvent.FallDetected)
+    }
+
+    @Test
+    fun `rejects a false positive - sudden stop while running keeps moving`() = runTest {
+        val accel = listOf(
+            accelG(3.0f, atMs = 0),      // hard foot-strike spike
+            accelG(1.5f, atMs = 100),    // still moving -> breaks stillness
+            accelG(1.6f, atMs = 600),
+            accelG(1.5f, atMs = 1_500),
+            accelG(1.7f, atMs = 2_500),
+            accelG(1.5f, atMs = 3_200),  // never 3s of calm
+        )
+        val gyro = listOf(
+            gyro(10f, atMs = 20),
+            gyro(10f, atMs = 40),
+            gyro(10f, atMs = 60),
+        )
+
+        val events = collectFalls(accel, gyro, StandardTestDispatcher(testScheduler))
+
+        assertTrue("a running stop must not trigger a fall", events.isEmpty())
+    }
+
+    @Test
+    fun `rejects a near miss - hard impact without an orientation change`() = runTest {
+        val accel = listOf(
+            accelG(3.0f, atMs = 0),      // impact...
+            accelG(1.0f, atMs = 1_100),  // ...but rotation window already expired
+            accelG(1.0f, atMs = 4_200),
+        )
+        val gyro = listOf(
+            gyro(0.1f, atMs = 20),       // negligible rotation (< 30 deg total)
+            gyro(0.1f, atMs = 40),
+        )
+
+        val events = collectFalls(accel, gyro, StandardTestDispatcher(testScheduler))
+
+        assertTrue("an impact without a tumble must not trigger a fall", events.isEmpty())
+    }
+
+    // --- helpers ---------------------------------------------------------
+
+    private suspend fun collectFalls(
+        accel: List<AccelReading>,
+        gyro: List<SensorSample>,
+        dispatcher: CoroutineDispatcher,
+    ): List<FallDetectionEvent> {
+        val useCase = DetectFallUseCase(
+            sensorRepository = FakeSensorRepository(
+                accel = timedFlow(accel) { it.timestampNs },
+                gyro = timedFlow(gyro) { it.timestampNs },
+            ),
+            dispatcher = dispatcher,
+        )
+        return useCase().toList()
+    }
+
+    /** Accelerometer reading of [g] g-force (raw == smoothed for clean test
+     *  data), at absolute time [atMs]. */
+    private fun accelG(g: Float, atMs: Long) =
+        AccelReading(
+            rawMagnitude = g * gravity,
+            smoothedMagnitude = g * gravity,
+            timestampNs = atMs * 1_000_000L,
+        )
+
+    /** Gyroscope sample of [radPerSec] angular speed (along x), at time [atMs]. */
+    private fun gyro(radPerSec: Float, atMs: Long) =
+        SensorSample(x = radPerSec, y = 0f, z = 0f, timestampNs = atMs * 1_000_000L)
+
+    /** Emits [samples] spaced by their absolute timestamps on the virtual clock. */
+    private fun <T> timedFlow(samples: List<T>, timeNs: (T) -> Long): Flow<T> = flow {
+        var clockMs = 0L
+        for (sample in samples) {
+            val targetMs = timeNs(sample) / 1_000_000L
+            val waitMs = targetMs - clockMs
+            if (waitMs > 0) delay(waitMs)
+            clockMs = targetMs
+            emit(sample)
+        }
+    }
+
+    private class FakeSensorRepository(
+        private val accel: Flow<AccelReading>,
+        private val gyro: Flow<SensorSample>,
+    ) : SensorRepository(sensorManager = null) {
+        override fun accelerometerSamples(): Flow<AccelReading> = accel
+        override fun gyroscopeSamples(): Flow<SensorSample> = gyro
+    }
+}

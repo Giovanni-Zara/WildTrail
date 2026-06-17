@@ -26,8 +26,11 @@
     <!-- Vibration for haptic feedback (e.g. fall detection / achievement unlock) -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Sensors (orientation -> AR navigation, accelerometer -> fall detection) -->
+    <!-- Sensors (accelerometer + gyroscope -> fall detection). High sampling
+         rate so we can catch a sub-second impact/tumble signature at ~50 Hz. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
 
     <!-- Phone call for emergency contacts (we use ACTION_DIAL, no permission strictly needed) -->
 
