@@ -1,7 +1,9 @@
 package com.wildtrail.app.ui.explore
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,12 +15,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -29,12 +37,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wildtrail.app.domain.model.HikeFilter
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.ui.components.HikeCard
+import kotlin.math.roundToInt
 
 @Composable
 fun ExploreRoute(
@@ -47,6 +58,12 @@ fun ExploreRoute(
         state = state,
         onQueryChange = viewModel::onQueryChanged,
         onSortChange = viewModel::onSortChanged,
+        onToggleFilterMenu = viewModel::onToggleFilterMenu,
+        onDistanceChange = viewModel::onDistanceChange,
+        onElevationChange = viewModel::onElevationChange,
+        onDifficultyToggle = viewModel::onDifficultyToggle,
+        onResetFilters = viewModel::onResetFilters,
+        onApplyFilters = viewModel::onApplyFilters,
         onHikeClick = onHikeClick,
         onUserClick = onUserClick,
         onRefresh = { viewModel.refresh() },
@@ -60,6 +77,12 @@ fun ExploreContent(
     state: ExploreUiState,
     onQueryChange: (String) -> Unit,
     onSortChange: (SortOption) -> Unit,
+    onToggleFilterMenu: () -> Unit,
+    onDistanceChange: (ClosedFloatingPointRange<Float>) -> Unit,
+    onElevationChange: (ClosedFloatingPointRange<Float>) -> Unit,
+    onDifficultyToggle: (Int) -> Unit,
+    onResetFilters: () -> Unit,
+    onApplyFilters: () -> Unit,
     onHikeClick: (String) -> Unit,
     onUserClick: (String) -> Unit,
     onRefresh: suspend () -> Unit,
@@ -82,25 +105,47 @@ fun ExploreContent(
             onRefresh = { refreshing = true },
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
+            // Single scroll container: the whole header (search row, sort row,
+            // filter menu) lives as the first LazyColumn items, so it scrolls
+            // away with the results instead of staying pinned.
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // ----- Row 1: search field + filter-menu toggle --------------
                 item {
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.query,
-                        onValueChange = onQueryChange,
-                        placeholder = { Text("Search hikes…") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        singleLine = true,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth(),
-                    )
+                    ) {
+                        OutlinedTextField(
+                            value = state.query,
+                            onValueChange = onQueryChange,
+                            placeholder = { Text("Search hikes…") },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = onToggleFilterMenu) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Filters",
+                                // Highlighted while the menu is open or a filter is active.
+                                tint = if (state.isFilterMenuOpen || state.appliedFilter.isActive()) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+                    }
                 }
+
+                // ----- Row 2: sort chips (horizontally scrollable) -----------
                 item {
-                    Spacer(Modifier.height(8.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
@@ -116,19 +161,37 @@ fun ExploreContent(
                         }
                     }
                 }
-                val list = if (state.query.isBlank()) state.featured else state.results
+
+                // ----- Row 3: expandable filter menu -------------------------
                 item {
-                    Spacer(Modifier.height(8.dp))
+                    AnimatedVisibility(visible = state.isFilterMenuOpen) {
+                        FilterMenu(
+                            filter = state.draftFilter,
+                            onDistanceChange = onDistanceChange,
+                            onElevationChange = onElevationChange,
+                            onDifficultyToggle = onDifficultyToggle,
+                            onReset = onResetFilters,
+                            onApply = onApplyFilters,
+                        )
+                    }
+                }
+
+                // ----- Row 4: results / featured -----------------------------
+                val list = if (state.showingResults) state.results else state.featured
+                item {
                     Text(
-                        if (state.query.isBlank()) "Featured this week" else "Results",
+                        if (state.showingResults) "Results" else "Featured this week",
                         style = MaterialTheme.typography.titleLarge,
                     )
                 }
                 if (list.isEmpty()) {
                     item {
                         Text(
-                            if (state.query.isBlank()) "No featured hikes yet — be the first!"
-                            else "No matches for \"${state.query}\"",
+                            if (state.showingResults) {
+                                "No hikes match your search and filters."
+                            } else {
+                                "No featured hikes yet — be the first!"
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -145,6 +208,77 @@ fun ExploreContent(
                     }
                 }
                 item { Spacer(Modifier.height(24.dp)) }
+            }
+        }
+    }
+}
+
+/**
+ * Stateless filter menu. Renders the *draft* criteria and raises every change
+ * as an event; nothing here filters on its own — only [onApply] commits.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterMenu(
+    filter: HikeFilter,
+    onDistanceChange: (ClosedFloatingPointRange<Float>) -> Unit,
+    onElevationChange: (ClosedFloatingPointRange<Float>) -> Unit,
+    onDifficultyToggle: (Int) -> Unit,
+    onReset: () -> Unit,
+    onApply: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Filters", style = MaterialTheme.typography.titleMedium)
+
+            // Distance (km)
+            Text(
+                "Distance: ${filter.minKm.roundToInt()}–${filter.maxKm.roundToInt()} km",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            RangeSlider(
+                value = filter.minKm..filter.maxKm,
+                onValueChange = onDistanceChange,
+                valueRange = 0f..HikeFilter.DISTANCE_MAX_KM,
+            )
+
+            // Elevation gain (m)
+            Text(
+                "Elevation gain: ${filter.minElevation}–${filter.maxElevation} m",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            RangeSlider(
+                value = filter.minElevation.toFloat()..filter.maxElevation.toFloat(),
+                onValueChange = onElevationChange,
+                valueRange = 0f..HikeFilter.ELEVATION_MAX_M.toFloat(),
+            )
+
+            // Difficulty (multi-select)
+            Text("Difficulty", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HikeFilter.DIFFICULTY_LEVELS.forEach { level ->
+                    FilterChip(
+                        selected = level in filter.difficulties,
+                        onClick = { onDifficultyToggle(level) },
+                        label = { Text("$level") },
+                    )
+                }
+            }
+
+            // Footer: Reset (draft only) + Apply (commits & filters)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
+                    Text("Reset")
+                }
+                Button(onClick = onApply, modifier = Modifier.weight(1f)) {
+                    Text("Apply")
+                }
             }
         }
     }

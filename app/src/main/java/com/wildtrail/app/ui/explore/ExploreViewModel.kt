@@ -10,6 +10,7 @@ import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.AuthState
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.UserRepository
+import com.wildtrail.app.domain.model.HikeFilter
 import com.wildtrail.app.domain.model.HikeLog
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /** Sort orders offered by the chips under the Explore search bar. */
 enum class SortOption(val label: String) {
@@ -33,8 +35,17 @@ enum class SortOption(val label: String) {
 data class ExploreUiState(
     val query: String = "",
     val sort: SortOption = SortOption.RECENT,
+    /** Visibility of the expandable filter menu (toggled by the ⋮ button). */
+    val isFilterMenuOpen: Boolean = false,
+    /** Live values shown by the filter menu's sliders/chips (not yet applied). */
+    val draftFilter: HikeFilter = HikeFilter(),
+    /** Criteria actually in effect — committed only by "Apply". */
+    val appliedFilter: HikeFilter = HikeFilter(),
     val results: List<HikeLog> = emptyList(),
     val featured: List<HikeLog> = emptyList(),
+    /** True when a search query or an active filter is in effect: the screen
+     *  then shows [results] instead of the [featured] feed. */
+    val showingResults: Boolean = false,
     val likedHikeIds: Set<String> = emptySet(),
     val currentUserUid: String? = null,
 )
@@ -46,8 +57,14 @@ class ExploreViewModel(
     private val userRepository: UserRepository,
 ) : ViewModel() {
 
+    // ---- Control state (single source of truth, survives rotation) ------
     private val query = MutableStateFlow("")
     private val sort = MutableStateFlow(SortOption.RECENT)
+    private val isFilterMenuOpen = MutableStateFlow(false)
+    private val draftFilter = MutableStateFlow(HikeFilter())
+    private val appliedFilter = MutableStateFlow(HikeFilter())
+
+    /** The filtered/searched results — refreshed only by [refreshResults]. */
     private val results = MutableStateFlow<List<HikeLog>>(emptyList())
 
     // Splice each creator's live profile picture onto the cards so previews
@@ -64,8 +81,23 @@ class ExploreViewModel(
         if (uid == null) flowOf(emptySet()) else hikeLogRepository.observeMyLikedHikeIds(uid)
     }
 
-    // query + sort merged so the whole combine stays at 5 typed sources.
-    private val controls = combine(query, sort) { q, s -> q to s }
+    /** All control flows merged into one so the public [uiState] combine stays
+     *  within combine()'s 5-source typed overload. */
+    private data class Controls(
+        val query: String,
+        val sort: SortOption,
+        val isFilterMenuOpen: Boolean,
+        val draftFilter: HikeFilter,
+        val appliedFilter: HikeFilter,
+    )
+
+    private val controls = combine(
+        query,
+        sort,
+        isFilterMenuOpen,
+        draftFilter,
+        appliedFilter,
+    ) { q, s, open, draft, applied -> Controls(q, s, open, draft, applied) }
 
     val uiState: StateFlow<ExploreUiState> = combine(
         controls,
@@ -73,12 +105,16 @@ class ExploreViewModel(
         featured,
         likedHikeIds,
         currentUidFlow,
-    ) { (q, s), r, featuredHikes, liked, uid ->
+    ) { c, r, featuredHikes, liked, uid ->
         ExploreUiState(
-            query = q,
-            sort = s,
-            results = sortHikes(r, s),
-            featured = sortHikes(featuredHikes, s),
+            query = c.query,
+            sort = c.sort,
+            isFilterMenuOpen = c.isFilterMenuOpen,
+            draftFilter = c.draftFilter,
+            appliedFilter = c.appliedFilter,
+            results = sortHikes(r, c.sort),
+            featured = sortHikes(featuredHikes, c.sort),
+            showingResults = c.query.isNotBlank() || c.appliedFilter.isActive(),
             likedHikeIds = liked,
             currentUserUid = uid,
         )
@@ -88,19 +124,70 @@ class ExploreViewModel(
         initialValue = ExploreUiState(),
     )
 
+    // ---- Events (hoisted from the UI) -----------------------------------
+
     fun onQueryChanged(q: String) {
         query.value = q
-        if (q.isBlank()) {
-            results.value = emptyList()
-            return
-        }
-        viewModelScope.launch {
-            results.value = hikeLogRepository.search(q)
-        }
+        refreshResults()
     }
 
     fun onSortChanged(option: SortOption) {
         sort.value = option
+    }
+
+    /** The ⋮ button only flips the menu's visibility — never filters. */
+    fun onToggleFilterMenu() {
+        isFilterMenuOpen.value = !isFilterMenuOpen.value
+    }
+
+    fun onDistanceChange(range: ClosedFloatingPointRange<Float>) {
+        draftFilter.value = draftFilter.value.copy(
+            minKm = range.start,
+            maxKm = range.endInclusive,
+        )
+    }
+
+    fun onElevationChange(range: ClosedFloatingPointRange<Float>) {
+        draftFilter.value = draftFilter.value.copy(
+            minElevation = range.start.roundToInt(),
+            maxElevation = range.endInclusive.roundToInt(),
+        )
+    }
+
+    fun onDifficultyToggle(level: Int) {
+        val current = draftFilter.value.difficulties
+        draftFilter.value = draftFilter.value.copy(
+            difficulties = if (level in current) current - level else current + level,
+        )
+    }
+
+    /** Reset the *draft* to defaults — does not itself filter (only Apply does). */
+    fun onResetFilters() {
+        draftFilter.value = HikeFilter()
+    }
+
+    /** The only trigger of the actual filtering: commit the draft and query. */
+    fun onApplyFilters() {
+        appliedFilter.value = draftFilter.value
+        isFilterMenuOpen.value = false
+        refreshResults()
+    }
+
+    /**
+     * Recompute [results] from the current query + applied filter via the
+     * repository. When neither is in effect we clear them so the screen falls
+     * back to the reactive [featured] feed.
+     */
+    private fun refreshResults() {
+        val q = query.value
+        val filter = appliedFilter.value
+        if (q.isBlank() && !filter.isActive()) {
+            results.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            results.value = hikeLogRepository.filter(q, filter)
+        }
     }
 
     private fun sortHikes(list: List<HikeLog>, sort: SortOption): List<HikeLog> = when (sort) {

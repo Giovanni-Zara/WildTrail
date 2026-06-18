@@ -1,5 +1,6 @@
 package com.wildtrail.app.data.repository
 
+import kotlinx.coroutines.flow.first
 import android.util.Log
 import com.wildtrail.app.data.local.dao.HikeLogDao
 import com.wildtrail.app.data.local.dao.LikeDao
@@ -11,6 +12,7 @@ import com.wildtrail.app.data.remote.FirestoreService
 import com.wildtrail.app.data.remote.dto.HikeLogDto
 import com.wildtrail.app.data.remote.dto.toDomain
 import com.wildtrail.app.data.remote.dto.toDto
+import com.wildtrail.app.domain.model.HikeFilter
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.Like
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+
 
 /**
  * The hike log repository — single source of truth for the "TREKKING" table.
@@ -141,6 +144,27 @@ class HikeLogRepository(
 
     suspend fun search(query: String): List<HikeLog> =
         hikeLogDao.search(query).map { it.toDomain() }
+
+    /**
+     * Apply the Explore filter menu's criteria against the local cache. Like
+     * [search] this is a one-shot snapshot (not a reactive Flow). Translates a
+     * [HikeFilter] into the DAO parameters: when no difficulty is selected we
+     * pass `anyDifficulty = true` plus a throwaway non-matching level so Room
+     * never expands an empty `IN ()`.
+     */
+    suspend fun filter(query: String, criteria: HikeFilter): List<HikeLog> {
+        val difficulties = criteria.difficulties.toList().ifEmpty { listOf(0) }
+        return hikeLogDao.filter(
+            q = query.trim(),
+            minKm = criteria.minKm,
+            maxKm = criteria.maxKm,
+            minElevation = criteria.minElevation,
+            maxElevation = criteria.maxElevation,
+            anyDifficulty = criteria.difficulties.isEmpty(),
+            difficulties = difficulties,
+        ).first()                    // ← collect one emission from the Flow
+            .map { it.toDomain() }     // ← now `it` is a HikeLogEntity ✓
+    }
 
     /** Force a re-pull from Firestore. Used by pull-to-refresh — even though
      *  the snapshot listeners already keep us live, this gives the user a

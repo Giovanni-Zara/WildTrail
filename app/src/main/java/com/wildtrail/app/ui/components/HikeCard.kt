@@ -4,8 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -20,19 +19,19 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -51,7 +50,6 @@ import com.wildtrail.app.util.formatHikeDate
  *  - Characteristics are rendered as a [FlowRow] of small chips so they
  *    wrap onto multiple lines on narrow screens instead of overflowing.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HikeCard(
     hike: HikeLog,
@@ -205,16 +203,18 @@ fun HikeCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // ----- Characteristics chips (wrap) -------------------------------
-            FlowRow(
+            // ----- Characteristics chips (always one row) ---------------------
+            // A non-wrapping Row with each chip weighted equally keeps all four
+            // on the same line regardless of label length. (A FlowRow used to
+            // wrap the longest surface label, "🏔 Mountain", onto a 2nd line.)
+            Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                CharChip("Diff ${hike.difficultyLevel}/5")
-                CharChip("Mud ${hike.mudRisk}/5")
-                CharChip("Path ${hike.pathClarity}/5")
-                CharChip(hike.surfaceType.shortLabel())
+                CharChip("Diff ${hike.difficultyLevel}/5", Modifier.weight(1f))
+                CharChip("Mud ${hike.mudRisk}/5", Modifier.weight(1f))
+                CharChip("Path ${hike.pathClarity}/5", Modifier.weight(1f))
+                CharChip(hike.surfaceType.shortLabel(), Modifier.weight(1f))
             }
         }
     }
@@ -244,15 +244,30 @@ private fun LikeControl(isLiked: Boolean, count: Int, onClick: (() -> Unit)?) {
     }
 }
 
+/**
+ * A compact, non-interactive condition pill. Designed to sit in a weighted
+ * [Row] so four of them divide the card width evenly and never wrap; the label
+ * centres and (only if it ever had to) ellipsises rather than pushing onto a
+ * second line.
+ */
 @Composable
-private fun CharChip(text: String) {
-    AssistChip(
-        onClick = { /* non-interactive */ },
-        label = { Text(text, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    )
+private fun CharChip(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 8.dp),
+        )
+    }
 }
 
 @Composable

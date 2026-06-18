@@ -61,6 +61,38 @@ interface HikeLogDao {
     )
     suspend fun search(q: String): List<HikeLogEntity>
 
+    /**
+     * Explore "Search & Filter" query: public hikes matching an optional text
+     * query AND the distance / elevation ranges AND (when any are selected) the
+     * chosen difficulty levels. [anyDifficulty] short-circuits the difficulty
+     * clause so the caller can mean "any level" without an empty `IN ()`.
+     *
+     * Returns a [Flow] so the results stay live: editing a hike's denormalised
+     * fields (e.g. `likesCount` after a like) re-emits the filtered list with
+     * the fresh value instead of leaving a stale snapshot on screen.
+     */
+    @Query(
+        """
+        SELECT * FROM hike_logs
+         WHERE isPrivate = 0
+           AND (:q = '' OR title LIKE '%' || :q || '%' OR description LIKE '%' || :q || '%')
+           AND lengthKm BETWEEN :minKm AND :maxKm
+           AND elevationGainMeters BETWEEN :minElevation AND :maxElevation
+           AND (:anyDifficulty OR difficultyLevel IN (:difficulties))
+         ORDER BY endedAt DESC
+         LIMIT 200
+        """,
+    )
+    fun filter(
+        q: String,
+        minKm: Float,
+        maxKm: Float,
+        minElevation: Int,
+        maxElevation: Int,
+        anyDifficulty: Boolean,
+        difficulties: List<Int>,
+    ): Flow<List<HikeLogEntity>>
+
     @Query("DELETE FROM hike_logs WHERE hikeId = :id")
     suspend fun deleteById(id: String)
 
