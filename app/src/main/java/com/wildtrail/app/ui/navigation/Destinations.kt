@@ -48,6 +48,13 @@ sealed class Destination(val route: String) {
         const val ARG_HIKE_ID = "hikeId"
     }
 
+    /** Dedicated review-submission screen, reached via the "Add review"
+     *  button on [HikeDetail]. */
+    data object SubmitReview : Destination("submit_review/{hikeId}") {
+        fun create(hikeId: String) = "submit_review/$hikeId"
+        const val ARG_HIKE_ID = "hikeId"
+    }
+
     /** Public profile of any user. Tapping a name in the comments / reviews
      *  / creator-block routes here. Distinct from the bottom-bar [Profile]
      *  which always shows *me*. */

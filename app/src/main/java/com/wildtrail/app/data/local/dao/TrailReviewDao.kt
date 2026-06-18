@@ -21,6 +21,9 @@ interface TrailReviewDao {
     @Query("SELECT * FROM trail_reviews WHERE reviewerUid = :uid AND hikeId = :hikeId LIMIT 1")
     suspend fun getMine(uid: String, hikeId: String): TrailReviewEntity?
 
+    @Query("SELECT * FROM trail_reviews WHERE reviewId = :reviewId LIMIT 1")
+    suspend fun getById(reviewId: String): TrailReviewEntity?
+
     @Query("SELECT AVG(difficultyLevel) FROM trail_reviews WHERE hikeId = :hikeId")
     fun observeAvgDifficulty(hikeId: String): Flow<Double?>
 

@@ -23,6 +23,8 @@ data class TrailReviewDto(
     var mudRisk: Int = 0,
     var animalEncounterRisk: Int = 0,
     var waterAvailability: Boolean = false,
+    var commentText: String? = null,
+    var imageUrls: List<String> = emptyList(),
     var createdAt: Long = 0L,
 )
 
@@ -37,6 +39,8 @@ fun TrailReviewDto.toDomain() = TrailReview(
     mudRisk = mudRisk,
     animalEncounterRisk = animalEncounterRisk,
     waterAvailability = waterAvailability,
+    commentText = commentText,
+    imageUrls = imageUrls,
     createdAt = createdAt,
 )
 
@@ -51,6 +55,8 @@ fun TrailReview.toDto() = TrailReviewDto(
     mudRisk = mudRisk,
     animalEncounterRisk = animalEncounterRisk,
     waterAvailability = waterAvailability,
+    commentText = commentText,
+    imageUrls = imageUrls,
     createdAt = createdAt,
 )
 

@@ -225,38 +225,6 @@ class HikeDetailViewModel(
             initialValue = HikeDetailUiState(loading = true),
         )
 
-    fun submitReview(
-        overallRating: Int,
-        fatigueLevel: Int,
-        pathClarity: Int,
-        difficultyLevel: Int,
-        mudRisk: Int,
-        animalEncounterRisk: Int,
-        waterAvailability: Boolean,
-    ) {
-        val auth = authRepository.authState.value as? AuthState.SignedIn ?: return
-        if (uiState.value.isMyHike) return
-        val review = TrailReview(
-            reviewId = UUID.randomUUID().toString(),
-            reviewerUid = auth.user.firebaseUid,
-            hikeId = hikeId,
-            overallRating = overallRating,
-            fatigueLevel = fatigueLevel,
-            pathClarity = pathClarity,
-            difficultyLevel = difficultyLevel,
-            mudRisk = mudRisk,
-            animalEncounterRisk = animalEncounterRisk,
-            waterAvailability = waterAvailability,
-            createdAt = System.currentTimeMillis(),
-        )
-        viewModelScope.launch {
-            runCatching {
-                socialRepository.submitReview(review)
-                hikeLogRepository.refreshAggregateRating(hikeId)
-            }
-        }
-    }
-
     fun postComment(text: String) {
         val auth = authRepository.authState.value as? AuthState.SignedIn ?: return
         val comment = HikeComment(

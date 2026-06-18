@@ -14,6 +14,7 @@ import com.wildtrail.app.ui.hike.HikeDetailRoute
 import com.wildtrail.app.ui.home.HomeRoute
 import com.wildtrail.app.ui.liked.LikedHikesRoute
 import com.wildtrail.app.ui.profile.ProfileRoute
+import com.wildtrail.app.ui.review.SubmitReviewRoute
 import com.wildtrail.app.ui.settings.SettingsRoute
 import com.wildtrail.app.ui.tracking.TrackingRoute
 
@@ -104,6 +105,23 @@ fun WildTrailNavGraph(
                     hikeId = hikeId,
                     onBack = { navController.popBackStack() },
                     onUserClick = openUser,
+                    onAddReview = {
+                        navController.navigate(Destination.SubmitReview.create(hikeId))
+                    },
+                )
+            }
+            composable(
+                route = Destination.SubmitReview.route,
+                arguments = listOf(
+                    navArgument(Destination.SubmitReview.ARG_HIKE_ID) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val hikeId = backStackEntry.arguments?.getString(Destination.SubmitReview.ARG_HIKE_ID)
+                    .orEmpty()
+                SubmitReviewRoute(
+                    hikeId = hikeId,
+                    onDone = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(

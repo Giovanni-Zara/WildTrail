@@ -32,6 +32,8 @@ data class TrailReviewEntity(
     val mudRisk: Int,
     val animalEncounterRisk: Int,
     val waterAvailability: Boolean,
+    val commentText: String?,
+    val imageUrls: List<String>,
     val createdAt: Long,
 )
 
@@ -46,6 +48,8 @@ fun TrailReviewEntity.toDomain(): TrailReview = TrailReview(
     mudRisk = mudRisk,
     animalEncounterRisk = animalEncounterRisk,
     waterAvailability = waterAvailability,
+    commentText = commentText,
+    imageUrls = imageUrls,
     createdAt = createdAt,
 )
 
@@ -60,5 +64,7 @@ fun TrailReview.toEntity(): TrailReviewEntity = TrailReviewEntity(
     mudRisk = mudRisk,
     animalEncounterRisk = animalEncounterRisk,
     waterAvailability = waterAvailability,
+    commentText = commentText,
+    imageUrls = imageUrls,
     createdAt = createdAt,
 )

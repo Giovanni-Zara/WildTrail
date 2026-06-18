@@ -19,5 +19,12 @@ data class TrailReview(
     val mudRisk: Int,
     val animalEncounterRisk: Int,
     val waterAvailability: Boolean,
+    /** Optional free-text feedback the reviewer typed in. */
+    val commentText: String? = null,
+    /** Photos attached to the review. While a submission is still uploading
+     *  these are device-local `file://` paths; once Storage upload completes
+     *  they're swapped for cross-device HTTPS download URLs. */
+    val imageUrls: List<String> = emptyList(),
+    /** System time of submission — doubles as the review's timestamp. */
     val createdAt: Long,
 )

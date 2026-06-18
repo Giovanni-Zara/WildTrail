@@ -5,7 +5,8 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
 /**
- * Thin wrapper around Firebase Storage for profile-picture uploads.
+ * Thin wrapper around Firebase Storage for image uploads (profile pictures
+ * and review photos).
  *
  *  - Files are stored at `profile_pictures/<uid>.jpg`. Re-uploading
  *    overwrites the previous file so we always have a single canonical
@@ -22,6 +23,18 @@ open class StorageService(
 
     open suspend fun uploadProfilePicture(uid: String, localUri: Uri): String {
         val ref = storage.reference.child("profile_pictures/$uid.jpg")
+        ref.putFile(localUri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
+    /**
+     * Upload a single review photo, returning its cross-device HTTPS download
+     * URL. Photos are namespaced under the owning review
+     * (`review_images/<reviewId>/<index>.jpg`) so re-submitting the same
+     * review overwrites its previous photos instead of leaking orphans.
+     */
+    open suspend fun uploadReviewImage(reviewId: String, index: Int, localUri: Uri): String {
+        val ref = storage.reference.child("review_images/$reviewId/$index.jpg")
         ref.putFile(localUri).await()
         return ref.downloadUrl.await().toString()
     }

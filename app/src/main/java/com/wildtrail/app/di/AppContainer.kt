@@ -25,6 +25,7 @@ import com.wildtrail.app.util.HikeMediaStore
 import com.wildtrail.app.util.LocalImageStore
 import com.wildtrail.app.util.LocationTracker
 import com.wildtrail.app.util.PhotoDescriber
+import com.wildtrail.app.util.ReviewImageStore
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +88,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val firestore = FirestoreService(FirebaseFirestore.getInstance())
     private val storage = StorageService()
     private val localImageStore = LocalImageStore(context.applicationContext)
+    private val reviewImageStore = ReviewImageStore(context.applicationContext)
     private val weatherHttpClient = OkHttpClient.Builder()
         .addInterceptor(
             HttpLoggingInterceptor().apply {
@@ -148,6 +150,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
         followedTrailDao = database.followedTrailDao(),
         commentDao = database.hikeCommentDao(),
         firestore = firestore,
+        storage = storage,
+        reviewImageStore = reviewImageStore,
         externalScope = appScope,
     )
 

@@ -30,6 +30,26 @@ class DetectFallUseCaseTest {
 
     private val gravity = 9.81f
 
+    /**
+     * Detection thresholds the synthetic scenarios below are written against
+     * (impact > 2.5 g, a 30° tumble, and a 3 s stillness window). Pinned
+     * explicitly rather than relying on [FallDetectionConfig]'s production
+     * defaults so this *logic* test stays deterministic when those defaults
+     * are re-tuned for real-world sensitivity — which is exactly what silently
+     * broke it before (the production impact threshold was raised to 5.5 g,
+     * above this scenario's 3 g spike, so no impact ever registered).
+     */
+    private val testConfig = FallDetectionConfig(
+        impactThresholdG = 2.5f,
+        rotationWindowMs = 1_000L,
+        rotationThresholdDeg = 30f,
+        inactivityWindowMs = 3_000L,
+        inactivityAccelMaxG = 1.2f,
+        inactivityGyroMaxRadPerSec = 0.6f,
+        maxStillnessWaitMs = 6_000L,
+        gravity = gravity,
+    )
+
     @Test
     fun `confirms a real fall - impact then rotation then stillness`() = runTest {
         val accel = listOf(
@@ -100,6 +120,7 @@ class DetectFallUseCaseTest {
                 accel = timedFlow(accel) { it.timestampNs },
                 gyro = timedFlow(gyro) { it.timestampNs },
             ),
+            config = testConfig,
             dispatcher = dispatcher,
         )
         return useCase().toList()

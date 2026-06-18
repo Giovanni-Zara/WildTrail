@@ -40,14 +40,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,8 +69,6 @@ import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.User
-import com.wildtrail.app.ui.components.EditableStarRow
-import com.wildtrail.app.ui.components.RatingRow
 import com.wildtrail.app.ui.components.StarRow
 import com.wildtrail.app.util.AudioPlayerController
 import com.wildtrail.app.util.PhotoDescriber
@@ -87,6 +83,7 @@ fun HikeDetailRoute(
     hikeId: String,
     onBack: () -> Unit,
     onUserClick: (String) -> Unit,
+    onAddReview: () -> Unit,
     viewModel: HikeDetailViewModel = viewModel(factory = HikeDetailViewModel.factory(hikeId)),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -101,7 +98,7 @@ fun HikeDetailRoute(
         onUserClick = onUserClick,
         onPredict = viewModel::requestPrediction,
         onPostComment = viewModel::postComment,
-        onSubmitReview = viewModel::submitReview,
+        onAddReview = onAddReview,
         onToggleLike = viewModel::toggleLike,
         onRefresh = { scope.launch { viewModel.refresh() } },
     )
@@ -117,7 +114,7 @@ fun HikeDetailContent(
     onUserClick: (String) -> Unit,
     onPredict: () -> Unit,
     onPostComment: (String) -> Unit,
-    onSubmitReview: (Int, Int, Int, Int, Int, Int, Boolean) -> Unit,
+    onAddReview: () -> Unit,
     onToggleLike: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -184,7 +181,7 @@ fun HikeDetailContent(
                 onPullRefresh = { refreshing = true },
                 onUserClick = onUserClick,
                 onPostComment = onPostComment,
-                onSubmitReview = onSubmitReview,
+                onAddReview = onAddReview,
                 predictionState = predictionState,
                 isOnline = isOnline,
                 onPredict = onPredict,
@@ -202,7 +199,7 @@ private fun HikeDetailBody(
     onPullRefresh: () -> Unit,
     onUserClick: (String) -> Unit,
     onPostComment: (String) -> Unit,
-    onSubmitReview: (Int, Int, Int, Int, Int, Int, Boolean) -> Unit,
+    onAddReview: () -> Unit,
     predictionState: PredictionState,
     isOnline: Boolean,
     onPredict: () -> Unit,
@@ -259,27 +256,32 @@ private fun HikeDetailBody(
                 )
             }
             item { CharacteristicsCard(hike) }
-            item { ReviewStatsCard(hike) }
-
+            // Community rating, with an inline "Add review" button to its right
+            // while the viewer can still review. Once they've reviewed (or on
+            // their own hike) the button disappears and the rating card expands
+            // to span the full width.
+            val myReview = state.reviews.firstOrNull { it.reviewerUid == state.currentUserUid }
+            val canAddReview =
+                !state.isMyHike && state.currentUserUid != null && myReview == null
             item {
-                Text(
-                    "Reviews (${state.reviews.size})",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
-            if (state.reviews.isEmpty()) {
-                item { Text("No reviews yet — be the first to share your experience!") }
-            } else {
-                items(state.reviews, key = { it.reviewId }) { review ->
-                    ReviewRow(
-                        review = review,
-                        author = state.authors[review.reviewerUid],
-                        onAuthorClick = { onUserClick(review.reviewerUid) },
-                    )
+                if (canAddReview) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ReviewStatsCard(hike, modifier = Modifier.weight(1f))
+                        Button(onClick = onAddReview) { Text("Add review") }
+                    }
+                } else {
+                    ReviewStatsCard(hike, modifier = Modifier.fillMaxWidth())
                 }
             }
-            when {
-                state.isMyHike -> item {
+
+            // Below the rating: the creator note, or — once submitted — the
+            // user's own review surfaced prominently.
+            if (state.isMyHike) {
+                item {
                     Text(
                         "You can't review your own hike — the trail characteristics " +
                             "you filled in at save time are shown above.",
@@ -287,18 +289,50 @@ private fun HikeDetailBody(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                state.currentUserUid == null -> Unit
-                state.myReviewExists -> item {
-                    // The user has already submitted a review for this hike;
-                    // their row already appears in the reviews list above, so
-                    // we just confirm and *do not* re-show the form.
+            } else if (myReview != null) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Your review",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        ReviewRow(
+                            review = myReview,
+                            author = state.currentUserUid?.let { state.authors[it] },
+                            onAuthorClick = { state.currentUserUid?.let(onUserClick) },
+                            highlighted = true,
+                        )
+                    }
+                }
+            }
+
+            // Everyone else's reviews (the user's own is surfaced above).
+            val otherReviews = state.reviews.filter { it.reviewerUid != state.currentUserUid }
+            item {
+                Text(
+                    "Reviews (${otherReviews.size})",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+            if (otherReviews.isEmpty()) {
+                item {
                     Text(
-                        "✓ You've already reviewed this hike — your review is shown above.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        if (state.myReviewExists || state.isMyHike) {
+                            "No other reviews yet."
+                        } else {
+                            "No reviews yet — be the first to share your experience!"
+                        },
                     )
                 }
-                else -> item { ReviewForm(onSubmit = onSubmitReview) }
+            } else {
+                items(otherReviews, key = { it.reviewId }) { review ->
+                    ReviewRow(
+                        review = review,
+                        author = state.authors[review.reviewerUid],
+                        onAuthorClick = { onUserClick(review.reviewerUid) },
+                    )
+                }
             }
 
             item {
@@ -820,8 +854,8 @@ private fun CharacteristicLine(label: String, value: Int) {
 }
 
 @Composable
-private fun ReviewStatsCard(hike: HikeLog) {
-    Card {
+private fun ReviewStatsCard(hike: HikeLog, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Community rating", style = MaterialTheme.typography.titleMedium)
             if (hike.reviewCount == 0) {
@@ -861,12 +895,17 @@ private fun ReviewRow(
     review: TrailReview,
     author: User?,
     onAuthorClick: () -> Unit,
+    highlighted: Boolean = false,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = if (highlighted) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
         ),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
     ) {
@@ -927,6 +966,30 @@ private fun ReviewRow(
                     value = null,
                 )
             }
+
+            // ----- Optional free-text feedback --------------------------
+            val comment = review.commentText
+            if (!comment.isNullOrBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Text(comment, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            // ----- Optional photo strip ---------------------------------
+            if (review.imageUrls.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(review.imageUrls, key = { it }) { url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = "Review photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -981,41 +1044,6 @@ private fun CommentRow(
             }
             Spacer(Modifier.height(6.dp))
             Text(comment.text, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun ReviewForm(onSubmit: (Int, Int, Int, Int, Int, Int, Boolean) -> Unit) {
-    var overall by remember { mutableIntStateOf(3) }
-    var difficulty by remember { mutableIntStateOf(3) }
-    var mud by remember { mutableIntStateOf(3) }
-    var clarity by remember { mutableIntStateOf(3) }
-    var fatigue by remember { mutableIntStateOf(3) }
-    var animal by remember { mutableIntStateOf(3) }
-    var water by remember { mutableStateOf(false) }
-
-    Card {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text("Leave a review", style = MaterialTheme.typography.titleMedium)
-            Text("Overall rating", style = MaterialTheme.typography.labelLarge)
-            EditableStarRow(rating = overall, onChange = { overall = it })
-            RatingRow("Difficulty", difficulty, { difficulty = it })
-            RatingRow("Mud risk", mud, { mud = it })
-            RatingRow("Path clarity", clarity, { clarity = it })
-            RatingRow("Fatigue", fatigue, { fatigue = it })
-            RatingRow("Animal risk", animal, { animal = it })
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(checked = water, onCheckedChange = { water = it })
-                Text("  Water sources available", style = MaterialTheme.typography.bodyMedium)
-            }
-            Button(
-                onClick = { onSubmit(overall, fatigue, clarity, difficulty, mud, animal, water) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Submit review") }
         }
     }
 }
