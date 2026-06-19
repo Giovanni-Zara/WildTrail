@@ -77,12 +77,14 @@ import com.wildtrail.app.ui.components.FullScreenPhotoViewer
 import com.wildtrail.app.ui.components.RatingGauge
 import com.wildtrail.app.ui.components.StarRow
 import com.wildtrail.app.util.AudioPlayerController
+import com.wildtrail.app.util.BirdDetection
 import com.wildtrail.app.util.PhotoDescriber
 import com.wildtrail.app.util.formatHikeDate
 import com.wildtrail.app.util.rememberAudioPlayerController
 import com.wildtrail.app.util.rememberIsOnline
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.roundToInt
 
 @Composable
 fun HikeDetailRoute(
@@ -774,31 +776,106 @@ private fun PhotoViewerDialog(
     }
 }
 
+/** Per-recording state for the on-device BirdNET scan (UI-local, ephemeral). */
+private sealed interface BirdScanState {
+    data object Idle : BirdScanState
+    data object Scanning : BirdScanState
+    data class Found(val birds: List<BirdDetection>) : BirdScanState
+    data object None : BirdScanState
+    data object Failed : BirdScanState
+}
+
 @Composable
 private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerController) {
     val isPlaying = controller.playingPath == audio.filePath
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        IconButton(onClick = { controller.toggle(audio.filePath) }) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    val context = LocalContext.current
+    val classifier = remember {
+        (context.applicationContext as WildTrailApp).container.birdNetClassifier
+    }
+    val scope = rememberCoroutineScope()
+    // Keyed by audio.id so a recycled row doesn't inherit another clip's result.
+    var scan by remember(audio.id) { mutableStateOf<BirdScanState>(BirdScanState.Idle) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IconButton(onClick = { controller.toggle(audio.filePath) }) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Voice $number", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    formatHikeDate(audio.timestamp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // Two-line "Detect / Bird" button that runs BirdNET on this clip.
+            Button(
+                onClick = {
+                    if (scan !is BirdScanState.Scanning) {
+                        scan = BirdScanState.Scanning
+                        scope.launch {
+                            scan = runCatching { classifier.detect(File(audio.filePath)) }.fold(
+                                onSuccess = { birds ->
+                                    if (birds.isEmpty()) BirdScanState.None
+                                    else BirdScanState.Found(birds)
+                                },
+                                onFailure = { BirdScanState.Failed },
+                            )
+                        }
+                    }
+                },
+                enabled = scan !is BirdScanState.Scanning,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                if (scan is BirdScanState.Scanning) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text(
+                        "Detect\nBird",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
         }
-        Spacer(Modifier.width(4.dp))
-        Column {
-            Text(
-                "Voice $number",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                formatHikeDate(audio.timestamp),
-                style = MaterialTheme.typography.labelSmall,
+
+        // Result line beneath the row.
+        when (val s = scan) {
+            is BirdScanState.Found -> {
+                val top = s.birds.first()
+                Text(
+                    "🐦 ${top.commonName} · ${(top.confidence * 100).roundToInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
+                )
+            }
+            BirdScanState.None -> Text(
+                "No confident bird detected",
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
             )
+            BirdScanState.Failed -> Text(
+                "Couldn't analyse this recording",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
+            )
+            else -> {}
         }
     }
 }

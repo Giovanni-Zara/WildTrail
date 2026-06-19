@@ -73,6 +73,12 @@ android {
         buildConfig = true
     }
 
+    // The BirdNET .tflite model is memory-mapped straight from the APK's
+    // assets, so it must not be compressed (a compressed asset can't be mmap'd).
+    androidResources {
+        noCompress += "tflite"
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -144,6 +150,12 @@ dependencies {
     // description feature on the hike-detail screen. Runs entirely on the
     // phone, no API key, no network.
     implementation(libs.mlkit.image.labeling)
+
+    // TensorFlow Lite — on-device BirdNET bird-sound classifier (model under
+    // assets/birdnet/). If the interpreter ever reports a missing op, add
+    // `org.tensorflow:tensorflow-lite-select-tf-ops` — but the standard BirdNET
+    // model only uses built-in ops, so this single artifact should suffice.
+    implementation(libs.tensorflow.lite)
 
     // Maps + Location
     implementation(libs.maps.compose)

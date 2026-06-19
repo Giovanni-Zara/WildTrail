@@ -42,6 +42,12 @@ coil = "2.7.0"
 # "AI photo description" feature.
 mlkitImageLabeling = "17.0.9"
 
+# TensorFlow Lite — on-device runtime for the BirdNET bird-sound classifier
+# (runs the model bundled under assets/birdnet/). BirdNET-Pi runs the same
+# model on a Raspberry Pi via plain tflite_runtime, so the built-in op set is
+# enough — no Select-TF-ops/Flex needed.
+tensorflowLite = "2.14.0"
+
 # Google Maps Compose (for displaying routes)
 mapsCompose = "6.4.0"
 playServicesMaps = "19.0.0"
@@ -134,6 +140,9 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # ML Kit Image Labeling (bundled, on-device)
 mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", version.ref = "mlkitImageLabeling" }
+
+# TensorFlow Lite (on-device BirdNET inference)
+tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
 
 # Maps + Location
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }

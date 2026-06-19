@@ -21,6 +21,7 @@ import com.wildtrail.app.data.repository.SensorRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.data.repository.WeatherRepository
+import com.wildtrail.app.util.BirdNetClassifier
 import com.wildtrail.app.util.HikeMediaStore
 import com.wildtrail.app.util.LocalImageStore
 import com.wildtrail.app.util.LocationTracker
@@ -62,6 +63,7 @@ interface AppContainer {
     val locationTracker: LocationTracker
     val hikeMediaStore: HikeMediaStore
     val photoDescriber: PhotoDescriber
+    val birdNetClassifier: BirdNetClassifier
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -184,6 +186,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val hikeMediaStore: HikeMediaStore = HikeMediaStore(context.applicationContext)
 
     override val photoDescriber: PhotoDescriber = PhotoDescriber()
+
+    override val birdNetClassifier: BirdNetClassifier =
+        BirdNetClassifier(context.applicationContext)
 
     private fun normalizeBaseUrl(rawUrl: String): String {
         val trimmed = rawUrl.trim()
