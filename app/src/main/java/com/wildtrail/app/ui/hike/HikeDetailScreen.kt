@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,9 +54,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -69,6 +72,8 @@ import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.ui.components.FullScreenPhotoViewer
+import com.wildtrail.app.ui.components.RatingGauge
 import com.wildtrail.app.ui.components.StarRow
 import com.wildtrail.app.util.AudioPlayerController
 import com.wildtrail.app.util.PhotoDescriber
@@ -855,25 +860,53 @@ private fun CharacteristicLine(label: String, value: Int) {
 
 @Composable
 private fun ReviewStatsCard(hike: HikeLog, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Community rating", style = MaterialTheme.typography.titleMedium)
-            if (hike.reviewCount == 0) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        if (hike.reviewCount == 0) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "Community rating",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text(
                     "No reviews yet.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StarRow(rating = hike.averageRating)
+            }
+        } else {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Dynamic Canvas gauge for the headline score.
+                RatingGauge(
+                    rating = hike.averageRating,
+                    modifier = Modifier.size(76.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     Text(
-                        "  %.1f / 5  (%d review%s)".format(
+                        "Community rating",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    StarRow(rating = hike.averageRating, size = 18.dp)
+                    Text(
+                        "%.1f / 5 · %d review%s".format(
                             hike.averageRating,
                             hike.reviewCount,
                             if (hike.reviewCount == 1) "" else "s",
                         ),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -897,9 +930,14 @@ private fun ReviewRow(
     onAuthorClick: () -> Unit,
     highlighted: Boolean = false,
 ) {
+    // Index of the review photo opened in the full-screen viewer, if any.
+    var openedPhoto by remember { mutableStateOf<Int?>(null) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(
+            defaultElevation = if (highlighted) 3.dp else 1.dp,
+        ),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = if (highlighted) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -907,10 +945,10 @@ private fun ReviewRow(
                 MaterialTheme.colorScheme.surface
             },
         ),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ----- Header: avatar + username + date + big stars ---------
+            // ----- Header: avatar + username + date + gradient score badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
@@ -918,13 +956,14 @@ private fun ReviewRow(
                 AvatarFromUrl(url = author?.profilePictureUrl, size = 44.dp)
                 Column(
                     modifier = Modifier
-                        .padding(start = 12.dp)
+                        .padding(horizontal = 12.dp)
                         .weight(1f)
                         .clickable(onClick = onAuthorClick),
                 ) {
                     Text(
                         author?.username ?: "Unknown user",
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
@@ -933,22 +972,10 @@ private fun ReviewRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                StarRow(rating = review.overallRating.toFloat(), size = 22.dp)
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    "${review.overallRating}/5",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                ScoreBadge(rating = review.overallRating)
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // ----- Pill grid of trail conditions ------------------------
             androidx.compose.foundation.layout.FlowRow(
@@ -974,22 +1001,69 @@ private fun ReviewRow(
                 Text(comment, style = MaterialTheme.typography.bodyMedium)
             }
 
-            // ----- Optional photo strip ---------------------------------
+            // ----- Optional photo strip (tap to open full-screen) -------
             if (review.imageUrls.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(review.imageUrls, key = { it }) { url ->
+                    itemsIndexed(review.imageUrls, key = { _, url -> url }) { index, url ->
                         AsyncImage(
                             model = url,
-                            contentDescription = "Review photo",
+                            contentDescription = "Review photo ${index + 1} — tap to view",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(120.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { openedPhoto = index },
                         )
                     }
                 }
             }
+        }
+    }
+
+    // Full-screen, swipeable viewer for the tapped review photo.
+    openedPhoto?.let { idx ->
+        FullScreenPhotoViewer(
+            imageUrls = review.imageUrls,
+            startIndex = idx,
+            onDismiss = { openedPhoto = null },
+        )
+    }
+}
+
+/**
+ * Compact gradient "score badge" shown in a review's header — a brand-coloured
+ * [Brush.linearGradient] pill with a gold star and the headline rating.
+ */
+@Composable
+private fun ScoreBadge(rating: Int) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary,
+                    ),
+                ),
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                tint = Color(0xFFFFD54F),
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "$rating/5",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
         }
     }
 }
