@@ -170,7 +170,6 @@ fun RatingGauge(
         MaterialTheme.colorScheme.primary,
         MaterialTheme.colorScheme.tertiary,
     ),
-    captionColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     val animated by animateFloatAsState(
         targetValue = rating.coerceIn(0f, max.toFloat()),
@@ -181,7 +180,6 @@ fun RatingGauge(
     val totalSweep = 270f
     val numberArgbTop = numberColors.first().toArgb()
     val numberArgbBottom = numberColors.last().toArgb()
-    val captionArgb = captionColor.toArgb()
     val label = "%.1f".format(animated)
 
     Canvas(modifier = modifier) {
@@ -228,19 +226,6 @@ fun RatingGauge(
             val fm = numberPaint.fontMetrics
             val baseline = center.y - (fm.ascent + fm.descent) / 2f
             canvas.nativeCanvas.drawText(label, center.x, baseline, numberPaint)
-
-            val captionPaint = android.graphics.Paint().apply {
-                isAntiAlias = true
-                textAlign = android.graphics.Paint.Align.CENTER
-                textSize = size.minDimension * 0.13f
-                color = captionArgb
-            }
-            canvas.nativeCanvas.drawText(
-                "OUT OF $max",
-                center.x,
-                center.y + size.minDimension * 0.30f,
-                captionPaint,
-            )
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.wildtrail.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -144,8 +146,7 @@ private fun HomeHero(user: User?) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 18.dp, vertical = 18.dp),
         ) {
             Column {
                 Text(
@@ -161,14 +162,23 @@ private fun HomeHero(user: User?) {
                 )
             }
             if (user != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                // Stat tiles centred in the space below the greeting; each tile
+                // takes an equal weighted slice so all four fit and stay even.
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    HeroStat(user.totalHikesCount.toString(), "Hikes", Modifier.weight(1f))
-                    HeroStat("%.0f km".format(user.totalDistanceKm), "Distance", Modifier.weight(1f))
-                    HeroStat(user.xpPoints.toString(), "XP", Modifier.weight(1f))
-                    HeroStat("Lv ${user.level}", "Level", Modifier.weight(1f))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        HeroStat(user.totalHikesCount.toString(), "Hikes", Modifier.weight(1f))
+                        HeroStat("%.0f km".format(user.totalDistanceKm), "Distance", Modifier.weight(1f))
+                        HeroStat(user.xpPoints.toString(), "XP", Modifier.weight(1f))
+                        HeroStat("Lv ${user.level}", "Level", Modifier.weight(1f))
+                    }
                 }
             }
         }
