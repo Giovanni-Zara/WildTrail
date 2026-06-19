@@ -172,15 +172,29 @@ open class AuthRepository(
 
         // Best-effort upload of the file we own; swap to the cross-device
         // HTTPS URL on success (Room + Firestore).
+        //
+        // This MUST run on [externalScope], not the caller's scope. A
+        // successful sign-up immediately flips the auth state to SignedIn,
+        // which navigates away from the login screen and clears its
+        // AuthViewModel — cancelling the viewModelScope this `signUp` call runs
+        // in. If the (slow) Storage upload ran inline it would be cancelled
+        // mid-flight, so the HTTPS URL would never reach Firestore and other
+        // users would only ever see the generic icon (the owner still sees the
+        // local file:// copy). The application scope outlives any one screen,
+        // so the upload finishes and propagates regardless of navigation.
         val uploadSource = localFile?.let(Uri::fromFile) ?: profilePictureUri
         if (uploadSource != null) {
-            runCatching {
-                val url = storage.uploadProfilePicture(fbUser.uid, uploadSource)
-                val patched = user.copy(profilePictureUrl = url)
-                userDao.upsert(patched.toEntity())
-                runCatching { firestore.upsertUser(patched.toDto()) }
-                    .onFailure { Log.w(TAG, "Firestore picture URL sync skipped on signUp", it) }
-            }.onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+            externalScope.launch {
+                runCatching {
+                    val url = storage.uploadProfilePicture(fbUser.uid, uploadSource)
+                    // Re-read in case a background refresh touched the row meanwhile.
+                    val latest = userDao.getById(fbUser.uid)?.toDomain() ?: user
+                    val patched = latest.copy(profilePictureUrl = url)
+                    userDao.upsert(patched.toEntity())
+                    runCatching { firestore.upsertUser(patched.toDto()) }
+                        .onFailure { Log.w(TAG, "Firestore picture URL sync skipped on signUp", it) }
+                }.onFailure { Log.w(TAG, "Profile picture upload skipped", it) }
+            }
         }
         user
     }
