@@ -5,7 +5,7 @@ The on-device bird-sound feature (the "Detect / Bird" button on each voice
 recording in the hike-detail screen) loads a BirdNET TensorFlow Lite model from
 THIS folder. The model files are NOT committed to the repo — you must add them:
 
-    app/src/main/assets/birdnet/model.tflite      <-- BirdNET TFLite model (FP32)
+    app/src/main/assets/birdnet/model.tflite      <-- BirdNET TFLite model (FP16)
     app/src/main/assets/birdnet/labels.txt         <-- one label per line
 
 Where to get them
