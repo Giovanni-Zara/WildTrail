@@ -17,6 +17,7 @@ import com.wildtrail.app.data.repository.AuthRepository
 import com.wildtrail.app.data.repository.EmergencyContactRepository
 import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.PredictRepository
+import com.wildtrail.app.data.repository.ReviewSummaryRepository
 import com.wildtrail.app.data.repository.SensorRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
@@ -59,6 +60,7 @@ interface AppContainer {
     val emergencyContactRepository: EmergencyContactRepository
     val weatherRepository: WeatherRepository
     val predictRepository: PredictRepository
+    val reviewSummaryRepository: ReviewSummaryRepository
     val sensorRepository: SensorRepository
     val locationTracker: LocationTracker
     val hikeMediaStore: HikeMediaStore
@@ -174,6 +176,10 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val predictRepository: PredictRepository = PredictRepository(
+        hikeApiService = hikeApiService,
+    )
+
+    override val reviewSummaryRepository: ReviewSummaryRepository = ReviewSummaryRepository(
         hikeApiService = hikeApiService,
     )
 

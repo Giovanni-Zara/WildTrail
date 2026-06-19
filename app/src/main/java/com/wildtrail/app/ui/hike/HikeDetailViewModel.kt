@@ -16,6 +16,7 @@ import com.wildtrail.app.domain.model.HikeComment
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.domain.usecase.GetReviewSummaryUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -53,6 +54,18 @@ sealed interface PredictionState {
     data class Error(val message: String) : PredictionState
 }
 
+/**
+ * State of the on-demand AI review summary. Like [PredictionState] it starts
+ * Idle, and because the ViewModel is recreated on each navigation to the
+ * screen, the summary auto-disposes when the user leaves the hike.
+ */
+sealed interface ReviewSummaryState {
+    data object Idle : ReviewSummaryState
+    data object Loading : ReviewSummaryState
+    data class Success(val summary: String) : ReviewSummaryState
+    data class Error(val message: String) : ReviewSummaryState
+}
+
 data class HikeDetailUiState(
     /** Distinct from `hike == null` so the UI can tell "still loading" from
      *  "loaded but the hike doesn't exist". */
@@ -87,6 +100,7 @@ class HikeDetailViewModel(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val predictRepository: PredictRepository,
+    private val getReviewSummaryUseCase: GetReviewSummaryUseCase,
 ) : ViewModel() {
 
     // ---------------- Prediction state ------------------------------------
@@ -137,6 +151,40 @@ class HikeDetailViewModel(
                 onFailure = {
                     _predictionState.value =
                         PredictionState.Error("Prediction failed. Check your connection and try again.")
+                },
+            )
+        }
+    }
+
+    // ---------------- AI review summary -----------------------------------
+
+    private val _summaryState = MutableStateFlow<ReviewSummaryState>(ReviewSummaryState.Idle)
+    val summaryState: StateFlow<ReviewSummaryState> = _summaryState.asStateFlow()
+
+    /**
+     * Triggered only when the user taps "AI summary". Collects the written
+     * review texts currently on screen and offloads summarization to the
+     * backend LLM. A separate StateFlow from [uiState] so it doesn't retrigger
+     * the heavy combine() chain.
+     */
+    fun summarizeReviews() {
+        if (_summaryState.value is ReviewSummaryState.Loading) return
+        val reviewTexts = uiState.value.reviews
+            .mapNotNull { it.commentText?.takeIf { t -> t.isNotBlank() } }
+
+        _summaryState.value = ReviewSummaryState.Loading
+        viewModelScope.launch {
+            getReviewSummaryUseCase(reviewTexts).fold(
+                onSuccess = { summary ->
+                    _summaryState.value = ReviewSummaryState.Success(summary)
+                },
+                onFailure = { t ->
+                    val message = if (t is GetReviewSummaryUseCase.NoReviewsException) {
+                        "No written reviews to summarize yet."
+                    } else {
+                        "Couldn't generate a summary. Check your connection and try again."
+                    }
+                    _summaryState.value = ReviewSummaryState.Error(message)
                 },
             )
         }
@@ -263,6 +311,9 @@ class HikeDetailViewModel(
                     userRepository = app.container.userRepository,
                     authRepository = app.container.authRepository,
                     predictRepository = app.container.predictRepository,
+                    getReviewSummaryUseCase = GetReviewSummaryUseCase(
+                        app.container.reviewSummaryRepository,
+                    ),
                 )
             }
         }

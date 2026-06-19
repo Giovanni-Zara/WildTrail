@@ -1,6 +1,7 @@
 package com.wildtrail.app.util
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,6 +51,18 @@ class BirdNetClassifier(private val context: Context) {
 
     private val mutex = Mutex()
 
+    /**
+     * Whether the model + labels are actually bundled under `assets/birdnet/`.
+     * Lets the UI tell "you haven't installed the model" apart from a genuine
+     * analysis failure, instead of blaming the recording.
+     */
+    fun isModelInstalled(): Boolean = runCatching {
+        val dir = MODEL_ASSET.substringBeforeLast('/')
+        val names = context.assets.list(dir).orEmpty()
+        MODEL_ASSET.substringAfterLast('/') in names &&
+            LABELS_ASSET.substringAfterLast('/') in names
+    }.getOrDefault(false)
+
     private val interpreter: Interpreter by lazy {
         Interpreter(loadModelAsset(), Interpreter.Options().apply { setNumThreads(4) })
     }
@@ -69,10 +82,21 @@ class BirdNetClassifier(private val context: Context) {
      */
     suspend fun detect(file: File, topN: Int = 5): List<BirdDetection> =
         withContext(Dispatchers.Default) {
-            val samples = AudioPcmDecoder.decodeToMonoFloat(file, SAMPLE_RATE)
-            if (samples.isEmpty()) return@withContext emptyList()
+            try {
+                detectInternal(file, topN)
+            } catch (t: Throwable) {
+                // Surface the real cause in logcat (filter by tag "BirdNet") —
+                // the UI only shows a generic message.
+                Log.e(TAG, "BirdNET analysis failed for ${file.name}", t)
+                throw t
+            }
+        }
 
-            mutex.withLock {
+    private suspend fun detectInternal(file: File, topN: Int): List<BirdDetection> {
+        val samples = AudioPcmDecoder.decodeToMonoFloat(file, SAMPLE_RATE)
+        if (samples.isEmpty()) return emptyList()
+
+        return mutex.withLock {
                 // Read the real shapes from the model so we don't hard-code them.
                 val windowSize = interpreter.getInputTensor(0).shape().last()
                 val numClasses = interpreter.getOutputTensor(0).shape().last()
@@ -137,6 +161,8 @@ class BirdNetClassifier(private val context: Context) {
     private fun sigmoid(x: Float): Float = 1f / (1f + exp(-x))
 
     private companion object {
+        const val TAG = "BirdNet"
+
         /** BirdNET's required input sample rate. */
         const val SAMPLE_RATE = 48_000
         const val MODEL_ASSET = "birdnet/model.tflite"

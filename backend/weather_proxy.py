@@ -12,10 +12,34 @@ import requests
 from flask import Flask, jsonify, request
 from sklearn.ensemble import HistGradientBoostingRegressor
 
+# NOTE: `openai` is imported lazily inside /summarize-reviews so that, if the
+# package isn't installed in the venv yet, only that endpoint fails — the rest
+# of the app (/health, /weather, /predict) keeps serving.
+
 app = Flask(__name__)
 
 OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/forecast"
 REQUEST_TIMEOUT_SECONDS = 10
+
+# ---- LLM review summarization (OpenRouter, OpenAI-compatible) -------------
+# Same provider/model used in backend/LLM/test_llm.py, but the key now comes
+# from an environment variable (see OPENROUTER_API_KEY) instead of api.py.
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b:free")
+MAX_REVIEWS = 60            # cap how many reviews we forward to the model
+MAX_REVIEW_CHARS = 1000     # and how long each one can be (defensive trimming)
+
+REVIEW_SUMMARY_SYSTEM_PROMPT = (
+    "You are an assistant specialized in analyzing hiking trail reviews."
+    " Your task is to read a set of reviews and produce a brief, informative summary."
+    " The summary must:"
+    " - describe the overall opinion of hikers (prevailing sentiment),"
+    " - collect the most frequent observations (positive and negative),"
+    " - note any recurring details (e.g. trail difficulty, conditions, views, crowding,"
+    " parking, signage, safety, practical tips), and be very concise (maximum 3 sentences)."
+    " Do not add personal comments beyond the required summary."
+    " Respond exclusively with the summary in English."
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = Path(os.environ.get("MODEL_PATH", BASE_DIR / "models" / "duration_model.joblib"))
@@ -253,6 +277,68 @@ def predict() -> tuple:
         jsonify({"duration_min": prediction, "unit": "minutes"}),
         200,
     )
+
+
+@app.post("/summarize-reviews")
+def summarize_reviews() -> tuple:
+    """Summarize a trail's reviews with an LLM (computation offloading).
+
+    Request body:  {"reviews": ["review 1", "review 2", ...]}
+    Response body: {"summary": "...", "review_count": 12}
+
+    Only the review text corpus is read; any other fields are ignored.
+    """
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        return jsonify({"error": "Server is missing OPENROUTER_API_KEY"}), 500
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Body must be a JSON object"}), 400
+
+    raw_reviews = payload.get("reviews")
+    if not isinstance(raw_reviews, list):
+        return jsonify({"error": "Body must contain a 'reviews' array of strings"}), 400
+
+    # Keep only non-empty strings; trim length per review and cap the count so
+    # one trail with thousands of reviews can't blow up the prompt / cost.
+    reviews: list[str] = []
+    for item in raw_reviews:
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                reviews.append(text[:MAX_REVIEW_CHARS])
+    reviews = reviews[:MAX_REVIEWS]
+
+    if not reviews:
+        return jsonify({"error": "No usable reviews provided"}), 400
+
+    reviews_block = "\n---\n".join(reviews)
+    user_message = f"Reviews:\n\n{reviews_block}"
+
+    try:
+        from openai import OpenAI  # lazy import — see note at top of file
+
+        client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+        response = client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[
+                {"role": "system", "content": REVIEW_SUMMARY_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.3,
+            max_tokens=300,
+            timeout=REQUEST_TIMEOUT_SECONDS * 3,
+        )
+        summary = (response.choices[0].message.content or "").strip()
+    except Exception:  # noqa: BLE001 - never leak provider internals to clients
+        app.logger.exception("LLM summarization failed")
+        return jsonify({"error": "Summarization failed"}), 502
+
+    if not summary:
+        return jsonify({"error": "Empty summary from model"}), 502
+
+    return jsonify({"summary": summary, "review_count": len(reviews)}), 200
 
 
 _load_model()

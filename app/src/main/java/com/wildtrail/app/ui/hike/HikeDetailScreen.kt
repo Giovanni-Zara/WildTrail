@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -96,11 +97,13 @@ fun HikeDetailRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val predictionState by viewModel.predictionState.collectAsStateWithLifecycle()
+    val summaryState by viewModel.summaryState.collectAsStateWithLifecycle()
     val isOnline = rememberIsOnline()
     val scope = rememberCoroutineScope()
     HikeDetailContent(
         state = state,
         predictionState = predictionState,
+        summaryState = summaryState,
         isOnline = isOnline,
         onBack = onBack,
         onUserClick = onUserClick,
@@ -109,6 +112,7 @@ fun HikeDetailRoute(
         onAddReview = onAddReview,
         onToggleLike = viewModel::toggleLike,
         onRefresh = { scope.launch { viewModel.refresh() } },
+        onSummarizeReviews = viewModel::summarizeReviews,
     )
 }
 
@@ -117,6 +121,7 @@ fun HikeDetailRoute(
 fun HikeDetailContent(
     state: HikeDetailUiState,
     predictionState: PredictionState,
+    summaryState: ReviewSummaryState,
     isOnline: Boolean,
     onBack: () -> Unit,
     onUserClick: (String) -> Unit,
@@ -125,6 +130,7 @@ fun HikeDetailContent(
     onAddReview: () -> Unit,
     onToggleLike: () -> Unit,
     onRefresh: () -> Unit,
+    onSummarizeReviews: () -> Unit,
 ) {
     var refreshing by remember { mutableStateOf(false) }
 
@@ -191,8 +197,10 @@ fun HikeDetailContent(
                 onPostComment = onPostComment,
                 onAddReview = onAddReview,
                 predictionState = predictionState,
+                summaryState = summaryState,
                 isOnline = isOnline,
                 onPredict = onPredict,
+                onSummarizeReviews = onSummarizeReviews,
             )
         }
     }
@@ -209,8 +217,10 @@ private fun HikeDetailBody(
     onPostComment: (String) -> Unit,
     onAddReview: () -> Unit,
     predictionState: PredictionState,
+    summaryState: ReviewSummaryState,
     isOnline: Boolean,
     onPredict: () -> Unit,
+    onSummarizeReviews: () -> Unit,
 ) {
     val hike = state.hike!!
     PullToRefreshBox(
@@ -324,6 +334,18 @@ private fun HikeDetailBody(
                             highlighted = true,
                         )
                     }
+                }
+            }
+
+            // AI review summary sits on top of the reviews region. Only shown
+            // when there's actual written text to summarize.
+            val hasWrittenReviews = state.reviews.any { !it.commentText.isNullOrBlank() }
+            if (hasWrittenReviews) {
+                item {
+                    ReviewSummaryCard(
+                        state = summaryState,
+                        onSummarize = onSummarizeReviews,
+                    )
                 }
             }
 
@@ -782,6 +804,7 @@ private sealed interface BirdScanState {
     data object Scanning : BirdScanState
     data class Found(val birds: List<BirdDetection>) : BirdScanState
     data object None : BirdScanState
+    data object NoModel : BirdScanState
     data object Failed : BirdScanState
 }
 
@@ -821,15 +844,19 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
             Button(
                 onClick = {
                     if (scan !is BirdScanState.Scanning) {
-                        scan = BirdScanState.Scanning
-                        scope.launch {
-                            scan = runCatching { classifier.detect(File(audio.filePath)) }.fold(
-                                onSuccess = { birds ->
-                                    if (birds.isEmpty()) BirdScanState.None
-                                    else BirdScanState.Found(birds)
-                                },
-                                onFailure = { BirdScanState.Failed },
-                            )
+                        if (!classifier.isModelInstalled()) {
+                            scan = BirdScanState.NoModel
+                        } else {
+                            scan = BirdScanState.Scanning
+                            scope.launch {
+                                scan = runCatching { classifier.detect(File(audio.filePath)) }.fold(
+                                    onSuccess = { birds ->
+                                        if (birds.isEmpty()) BirdScanState.None
+                                        else BirdScanState.Found(birds)
+                                    },
+                                    onFailure = { BirdScanState.Failed },
+                                )
+                            }
                         }
                     }
                 },
@@ -867,6 +894,12 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
                 "No confident bird detected",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
+            )
+            BirdScanState.NoModel -> Text(
+                "Bird model not installed — add it to assets/birdnet/",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 4.dp),
             )
             BirdScanState.Failed -> Text(
@@ -945,6 +978,84 @@ private fun CharacteristicLine(label: String, value: Int) {
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         StarRow(rating = value.toFloat())
         Text("  $value/5", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * Stateless AI review-summary card. Shows an "AI summary" button while idle;
+ * tapping it is the ONLY trigger for inference. While the backend LLM is
+ * "thinking" it shows a spinner; on success the generated text replaces the
+ * button. The summary auto-disposes when the user leaves the screen because
+ * the ViewModel (and its [ReviewSummaryState]) is recreated on re-entry.
+ */
+@Composable
+private fun ReviewSummaryCard(
+    state: ReviewSummaryState,
+    onSummarize: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "AI review summary",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                when (state) {
+                    ReviewSummaryState.Loading -> CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp,
+                    )
+                    // Once we have a summary the button is intentionally gone.
+                    is ReviewSummaryState.Success -> Unit
+                    // Idle or Error → offer the (re)try button.
+                    else -> Button(onClick = onSummarize) { Text("AI summary") }
+                }
+            }
+
+            when (state) {
+                is ReviewSummaryState.Success -> Text(
+                    state.summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                is ReviewSummaryState.Error -> Text(
+                    state.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                ReviewSummaryState.Loading -> Text(
+                    "Reading what hikers said…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                )
+                ReviewSummaryState.Idle -> Text(
+                    "Get the gist of all reviews for this trail.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                )
+            }
+        }
     }
 }
 
