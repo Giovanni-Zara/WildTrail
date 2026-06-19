@@ -64,8 +64,9 @@ interface HikeLogDao {
     /**
      * Explore "Search & Filter" query: public hikes matching an optional text
      * query AND the distance / elevation ranges AND (when any are selected) the
-     * chosen difficulty levels. [anyDifficulty] short-circuits the difficulty
-     * clause so the caller can mean "any level" without an empty `IN ()`.
+     * chosen difficulty levels AND the chosen surface types. [anyDifficulty] /
+     * [anySurface] short-circuit their respective clauses so the caller can
+     * mean "any" without an empty `IN ()`.
      *
      * Returns a [Flow] so the results stay live: editing a hike's denormalised
      * fields (e.g. `likesCount` after a like) re-emits the filtered list with
@@ -79,6 +80,7 @@ interface HikeLogDao {
            AND lengthKm BETWEEN :minKm AND :maxKm
            AND elevationGainMeters BETWEEN :minElevation AND :maxElevation
            AND (:anyDifficulty OR difficultyLevel IN (:difficulties))
+           AND (:anySurface OR surfaceType IN (:surfaces))
          ORDER BY endedAt DESC
          LIMIT 200
         """,
@@ -91,6 +93,8 @@ interface HikeLogDao {
         maxElevation: Int,
         anyDifficulty: Boolean,
         difficulties: List<Int>,
+        anySurface: Boolean,
+        surfaces: List<String>,
     ): Flow<List<HikeLogEntity>>
 
     @Query("DELETE FROM hike_logs WHERE hikeId = :id")

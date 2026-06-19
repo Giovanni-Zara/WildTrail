@@ -12,6 +12,7 @@ package com.wildtrail.app.domain.model
  * slider bounds and double as the "unbounded" sentinel for [isActive].
  *
  * @property difficulties selected difficulty levels (1..5); empty means "any".
+ * @property surfaceTypes selected surface/terrain types; empty means "any".
  */
 data class HikeFilter(
     val minKm: Float = 0f,
@@ -19,6 +20,7 @@ data class HikeFilter(
     val minElevation: Int = 0,
     val maxElevation: Int = ELEVATION_MAX_M,
     val difficulties: Set<Int> = emptySet(),
+    val surfaceTypes: Set<SurfaceType> = emptySet(),
 ) {
     /**
      * Whether this filter actually narrows anything — used by the ViewModel to
@@ -30,7 +32,8 @@ data class HikeFilter(
             maxKm < DISTANCE_MAX_KM ||
             minElevation > 0 ||
             maxElevation < ELEVATION_MAX_M ||
-            difficulties.isNotEmpty()
+            difficulties.isNotEmpty() ||
+            surfaceTypes.isNotEmpty()
 
     companion object {
         const val DISTANCE_MAX_KM = 50f

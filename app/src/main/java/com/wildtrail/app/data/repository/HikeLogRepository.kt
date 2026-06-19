@@ -1,6 +1,5 @@
 package com.wildtrail.app.data.repository
 
-import kotlinx.coroutines.flow.first
 import android.util.Log
 import com.wildtrail.app.data.local.dao.HikeLogDao
 import com.wildtrail.app.data.local.dao.LikeDao
@@ -146,14 +145,21 @@ class HikeLogRepository(
         hikeLogDao.search(query).map { it.toDomain() }
 
     /**
-     * Apply the Explore filter menu's criteria against the local cache. Like
-     * [search] this is a one-shot snapshot (not a reactive Flow). Translates a
-     * [HikeFilter] into the DAO parameters: when no difficulty is selected we
-     * pass `anyDifficulty = true` plus a throwaway non-matching level so Room
-     * never expands an empty `IN ()`.
+     * Apply the Explore filter menu's criteria against the local cache.
+     *
+     * Returns a *reactive* [Flow] (not a one-shot snapshot) so the filtered
+     * list stays live: when a denormalised field on a matching hike changes —
+     * e.g. `likesCount` after the user taps the heart on a filtered card — Room
+     * re-emits the list with the fresh value instead of leaving a stale count
+     * on screen.
+     *
+     * Translates a [HikeFilter] into the DAO parameters: when no difficulty (or
+     * surface type) is selected we pass `anyDifficulty`/`anySurface = true` plus
+     * a throwaway non-matching value so Room never expands an empty `IN ()`.
      */
-    suspend fun filter(query: String, criteria: HikeFilter): List<HikeLog> {
+    fun filter(query: String, criteria: HikeFilter): Flow<List<HikeLog>> {
         val difficulties = criteria.difficulties.toList().ifEmpty { listOf(0) }
+        val surfaces = criteria.surfaceTypes.map { it.name }.ifEmpty { listOf("") }
         return hikeLogDao.filter(
             q = query.trim(),
             minKm = criteria.minKm,
@@ -162,8 +168,9 @@ class HikeLogRepository(
             maxElevation = criteria.maxElevation,
             anyDifficulty = criteria.difficulties.isEmpty(),
             difficulties = difficulties,
-        ).first()                    // ← collect one emission from the Flow
-            .map { it.toDomain() }     // ← now `it` is a HikeLogEntity ✓
+            anySurface = criteria.surfaceTypes.isEmpty(),
+            surfaces = surfaces,
+        ).map { list -> list.map { it.toDomain() } }
     }
 
     /** Force a re-pull from Firestore. Used by pull-to-refresh — even though
