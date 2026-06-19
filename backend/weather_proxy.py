@@ -331,9 +331,21 @@ def summarize_reviews() -> tuple:
             timeout=REQUEST_TIMEOUT_SECONDS * 3,
         )
         summary = (response.choices[0].message.content or "").strip()
-    except Exception:  # noqa: BLE001 - never leak provider internals to clients
+    except Exception as exc:  # noqa: BLE001
         app.logger.exception("LLM summarization failed")
-        return jsonify({"error": "Summarization failed"}), 502
+        # TEMPORARY debugging aid: echo the exception type + short message so it
+        # shows up directly in curl / Android logcat. Remove (or gate behind a
+        # debug flag) once the endpoint is confirmed working — it must never
+        # expose anything sensitive in production.
+        return (
+            jsonify(
+                {
+                    "error": "Summarization failed",
+                    "detail": f"{type(exc).__name__}: {str(exc)[:200]}",
+                }
+            ),
+            502,
+        )
 
     if not summary:
         return jsonify({"error": "Empty summary from model"}), 502
