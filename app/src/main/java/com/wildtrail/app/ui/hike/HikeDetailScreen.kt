@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -272,11 +273,23 @@ private fun HikeDetailBody(
                 if (canAddReview) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        // Card takes all the remaining width; the button is kept
+                        // compact with its label stacked on two lines so the
+                        // community-rating card has room to breathe.
                         ReviewStatsCard(hike, modifier = Modifier.weight(1f))
-                        Button(onClick = onAddReview) { Text("Add review") }
+                        Button(
+                            onClick = onAddReview,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                "Add\nreview",
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 } else {
                     ReviewStatsCard(hike, modifier = Modifier.fillMaxWidth())
