@@ -15,7 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,14 +22,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.ui.components.AuroraHeader
+import com.wildtrail.app.ui.components.HeroStat
 import com.wildtrail.app.ui.components.HikeCard
+import com.wildtrail.app.ui.components.SectionHeader
 
 @Composable
 fun HomeRoute(
@@ -67,18 +70,7 @@ fun HomeContent(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (state.currentUser != null) "Hi, ${state.currentUser.username}!"
-                        else "Welcome",
-                    )
-                },
-            )
-        },
-    ) { padding: PaddingValues ->
+    Scaffold { padding: PaddingValues ->
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = { refreshing = true },
@@ -92,12 +84,9 @@ fun HomeContent(
             ) {
                 item {
                     Spacer(Modifier.height(8.dp))
-                    if (state.currentUser != null) {
-                        StatsRow(state.currentUser)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Recently from you", style = MaterialTheme.typography.titleLarge)
+                    HomeHero(state.currentUser)
                 }
+                item { SectionHeader("Recently from you") }
                 if (state.recentHikes.isEmpty()) {
                     item {
                         Text(
@@ -119,8 +108,8 @@ fun HomeContent(
                     }
                 }
                 item {
-                    Spacer(Modifier.height(8.dp))
-                    Text("Trending publicly", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(4.dp))
+                    SectionHeader("Trending publicly")
                 }
                 val mineIds = state.recentHikes.mapTo(HashSet()) { it.hikeId }
                 val publicOthers = state.publicFeed.filter { it.hikeId !in mineIds }
@@ -141,25 +130,47 @@ fun HomeContent(
     }
 }
 
+/**
+ * Animated gradient hero: a personal greeting over the [AuroraHeader] banner,
+ * with the user's headline stats as frosted "glass" tiles.
+ */
 @Composable
-private fun StatsRow(user: User) {
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun HomeHero(user: User?) {
+    AuroraHeader(
         modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .height(200.dp),
     ) {
-        StatBlock(label = "Hikes", value = user.totalHikesCount.toString())
-        StatBlock(label = "Distance", value = "%.1f km".format(user.totalDistanceKm))
-        StatBlock(label = "XP", value = user.xpPoints.toString())
-        StatBlock(label = "Level", value = user.level.toString())
-    }
-}
-
-@Composable
-private fun StatBlock(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleLarge)
-        Text(label, style = MaterialTheme.typography.labelSmall)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column {
+                Text(
+                    "WELCOME BACK",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+                Text(
+                    user?.username ?: "Welcome",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
+            if (user != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    HeroStat(user.totalHikesCount.toString(), "Hikes", Modifier.weight(1f))
+                    HeroStat("%.0f km".format(user.totalDistanceKm), "Distance", Modifier.weight(1f))
+                    HeroStat(user.xpPoints.toString(), "XP", Modifier.weight(1f))
+                    HeroStat("Lv ${user.level}", "Level", Modifier.weight(1f))
+                }
+            }
+        }
     }
 }

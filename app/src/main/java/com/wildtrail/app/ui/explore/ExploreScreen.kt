@@ -51,6 +51,7 @@ import com.wildtrail.app.domain.model.HikeFilter
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
 import com.wildtrail.app.ui.components.HikeCard
+import com.wildtrail.app.ui.components.SectionHeader
 import kotlin.math.roundToInt
 
 @Composable
@@ -203,9 +204,8 @@ fun ExploreContent(
                 // ----- Row 4: results / featured -----------------------------
                 val list = if (state.showingResults) state.results else state.featured
                 item {
-                    Text(
+                    SectionHeader(
                         if (state.showingResults) "Results" else "Featured this week",
-                        style = MaterialTheme.typography.titleLarge,
                     )
                 }
                 if (list.isEmpty()) {

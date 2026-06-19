@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -81,8 +81,9 @@ fun HikeCard(
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
@@ -133,9 +134,11 @@ fun HikeCard(
                 AsyncImage(
                     model = hike.coverPhotoUrl,
                     contentDescription = null,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp),
+                        .height(184.dp)
+                        .clip(RoundedCornerShape(18.dp)),
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -222,25 +225,43 @@ fun HikeCard(
 
 @Composable
 private fun LikeControl(isLiked: Boolean, count: Int, onClick: (() -> Unit)?) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (onClick != null) {
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isLiked) "Unlike" else "Like",
-                    tint = if (isLiked) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+    val shape = RoundedCornerShape(50)
+    val container = if (isLiked) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val contentColor = if (isLiked) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        shape = shape,
+        color = container,
+        modifier = if (onClick != null) {
+            Modifier.clip(shape).clickable(onClick = onClick)
         } else {
+            Modifier
+        },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        ) {
             Icon(
                 imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(8.dp),
+                contentDescription = if (isLiked) "Unlike" else "Like",
+                tint = if (isLiked) MaterialTheme.colorScheme.primary else contentColor,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "$count",
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
             )
         }
-        Text("$count", style = MaterialTheme.typography.bodyMedium)
     }
 }
 

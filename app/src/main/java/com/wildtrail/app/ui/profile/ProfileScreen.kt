@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -41,7 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,7 +54,9 @@ import com.wildtrail.app.domain.model.AchievementDefinition
 import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.ui.components.AuroraHeader
 import com.wildtrail.app.ui.components.HikeCard
+import com.wildtrail.app.ui.components.SectionHeader
 import com.wildtrail.app.util.LevelMath
 import java.util.Calendar
 import java.util.Locale
@@ -164,19 +170,15 @@ fun ProfileContent(
                 }
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            "Recent Achievements",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (onOpenAchievements != null) {
-                            TextButton(onClick = onOpenAchievements) { Text("See all") }
-                        }
-                    }
+                    val openAch = onOpenAchievements
+                    SectionHeader(
+                        title = "Recent Achievements",
+                        trailing = if (openAch != null) {
+                            { TextButton(onClick = openAch) { Text("See all") } }
+                        } else {
+                            null
+                        },
+                    )
                 }
                 if (state.earnedAchievements.isEmpty()) {
                     item {
@@ -197,10 +199,7 @@ fun ProfileContent(
                 }
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        if (state.isMe) "My hikes" else "Hikes",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    SectionHeader(if (state.isMe) "My hikes" else "Hikes")
                 }
                 if (state.hikes.isEmpty()) {
                     item {
@@ -230,59 +229,74 @@ fun ProfileContent(
 
 @Composable
 private fun ProfileHeader(user: User) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier.size(80.dp).clip(CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (user.profilePictureUrl != null) {
-                AsyncImage(
-                    model = user.profilePictureUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(72.dp),
-                )
-            }
-        }
-        Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-            Text(user.username, style = MaterialTheme.typography.headlineMedium)
-            val ageText = user.dateOfBirth?.let { dob ->
-                val years = ageInYears(dob)
-                if (years > 0) "$years y/o" else null
-            }
-            val parts = listOfNotNull(
-                user.country,
-                ageText,
-                user.sex?.name?.lowercase(Locale.getDefault())?.replace('_', ' '),
-            )
-            if (parts.isNotEmpty()) {
-                Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+    AuroraHeader(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar in a frosted ring so it reads on the gradient.
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.22f))
+                        .padding(3.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (user.profilePictureUrl != null) {
+                        AsyncImage(
+                            model = user.profilePictureUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(64.dp),
+                        )
+                    }
+                }
+                Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                    Text(
+                        user.username,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                    )
+                    val ageText = user.dateOfBirth?.let { dob ->
+                        val years = ageInYears(dob)
+                        if (years > 0) "$years y/o" else null
+                    }
+                    val parts = listOfNotNull(
+                        user.country,
+                        ageText,
+                        user.sex?.name?.lowercase(Locale.getDefault())?.replace('_', ' '),
+                    )
+                    if (parts.isNotEmpty()) {
+                        Text(
+                            parts.joinToString(" · "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                        )
+                    }
+                }
             }
             user.bio?.takeIf { it.isNotBlank() }?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.88f),
+                )
             }
             val number = user.emergencyContactNumber.ifBlank { DEFAULT_EMERGENCY_NUMBER }
             val isDefault = number == DEFAULT_EMERGENCY_NUMBER
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
-                text = if (isDefault) {
-                    "Emergency contact: $number (default)"
-                } else {
-                    "Emergency contact: $number"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (isDefault) "Emergency contact: $number (default)" else "Emergency contact: $number",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.78f),
             )
         }
     }
@@ -295,7 +309,10 @@ private fun LevelProgressCard(user: User, achievementsCount: Int) {
     val needed = LevelMath.xpForNextLevel(level)
     val progress = LevelMath.progressInCurrentLevel(user.xpPoints)
 
-    Card {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -312,7 +329,10 @@ private fun LevelProgressCard(user: User, achievementsCount: Int) {
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp)),
             )
             Spacer(Modifier.height(6.dp))
             Text(

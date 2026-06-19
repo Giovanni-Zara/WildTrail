@@ -54,8 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +69,7 @@ import coil.compose.AsyncImage
 import com.wildtrail.app.BuildConfig
 import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
+import com.wildtrail.app.ui.components.AuroraHeader
 import com.wildtrail.app.ui.theme.WildTrailTheme
 import com.wildtrail.app.util.Countries
 import java.text.SimpleDateFormat
@@ -130,18 +133,33 @@ fun LoginContent(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(48.dp))
-            Text(
-                text = "WildTrail",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "Track. Discover. Share.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
             Spacer(Modifier.height(32.dp))
+            AuroraHeader(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(164.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "WildTrail",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Track. Discover. Share.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White.copy(alpha = 0.9f),
+                    )
+                }
+            }
+            Spacer(Modifier.height(28.dp))
 
             // --- Sign-up only fields ------------------------------------
             if (state.isSignUp) {

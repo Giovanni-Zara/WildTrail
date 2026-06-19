@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -29,7 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -47,6 +50,8 @@ import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.AchievementDefinition
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.User
+import com.wildtrail.app.ui.components.AuroraHeader
+import com.wildtrail.app.ui.components.SectionHeader
 import com.wildtrail.app.util.AchievementEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -156,16 +161,17 @@ fun AchievementsRoute(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { Spacer(Modifier.height(8.dp)) }
+            item {
+                Spacer(Modifier.height(8.dp))
+                AchievementsHero(
+                    earned = state.earnedIds.size,
+                    total = state.definitions.size,
+                )
+            }
             // Earned first, locked next — visual reward for the user.
             val (earned, locked) = state.definitions.partition { it.achievementId in state.earnedIds }
             if (earned.isNotEmpty()) {
-                item {
-                    Text(
-                        "Unlocked",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
+                item { SectionHeader("Unlocked") }
                 items(earned, key = { "earned-${it.achievementId}" }) { def ->
                     AchievementRow(definition = def, earned = true, user = state.user, hikes = state.hikes)
                 }
@@ -173,16 +179,51 @@ fun AchievementsRoute(
             if (locked.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Locked",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    SectionHeader("Locked")
                 }
                 items(locked, key = { "locked-${it.achievementId}" }) { def ->
                     AchievementRow(definition = def, earned = false, user = state.user, hikes = state.hikes)
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun AchievementsHero(earned: Int, total: Int) {
+    AuroraHeader(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(156.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                "YOUR TROPHIES",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.85f),
+            )
+            Text(
+                "$earned of $total unlocked",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+            val fraction = if (total > 0) earned.toFloat() / total.toFloat() else 0f
+            LinearProgressIndicator(
+                progress = { fraction },
+                color = Color.White,
+                trackColor = Color.White.copy(alpha = 0.3f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
+            )
         }
     }
 }
