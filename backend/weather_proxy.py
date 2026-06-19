@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 import joblib
 import pandas as pd
 import requests
@@ -240,7 +242,11 @@ def predict() -> tuple:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    prediction = float(MODEL_STATE.model.predict(features)[0])
+    # prediction = float(MODEL_STATE.model.predict(features)[0])
+    # prediction = round(max(prediction, 0.0), 1)
+
+    prediction_log = float(MODEL_STATE.model.predict(features)[0])
+    prediction = float(np.expm1(prediction_log))   # <-- undo the log transform
     prediction = round(max(prediction, 0.0), 1)
 
     return (
