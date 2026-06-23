@@ -161,7 +161,6 @@ fun LoginContent(
             }
             Spacer(Modifier.height(28.dp))
 
-            // --- Sign-up only fields ------------------------------------
             if (state.isSignUp) {
                 ProfilePicturePicker(
                     uri = state.profilePictureUri,
@@ -228,7 +227,6 @@ fun LoginContent(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // --- Common fields ------------------------------------------
             OutlinedTextField(
                 value = state.email,
                 onValueChange = onEmailChange,
@@ -490,9 +488,6 @@ private fun CountryDropdown(value: String, onChange: (String) -> Unit) {
                 .menuAnchor(),
         )
         if (filtered.isNotEmpty()) {
-            // DropdownMenu in Material 3 has an internally-scrollable
-            // Column. Showing every match lets the user scroll instead
-            // of being silently truncated.
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
@@ -523,7 +518,6 @@ private fun Sex.shortLabel(): String = when (this) {
     Sex.PREFER_NOT_TO_SAY -> "N/A"
 }
 
-/** Returns the epoch-millis representing the date exactly [years] ago. */
 private fun dobMillisYearsAgo(years: Int): Long {
     val cal = Calendar.getInstance()
     cal.add(Calendar.YEAR, -years)

@@ -37,20 +37,6 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-/**
- * Manual DI container.
- *
- * The contract:
- *  - [AppContainer] is the *interface* that ViewModels depend on.
- *  - [DefaultAppContainer] is the production wiring (real Firebase, real Room).
- *  - In tests we substitute a `FakeAppContainer` that returns in-memory fakes.
- *
- * Why a single big container?
- *  - Easy to reason about: every dependency is constructed exactly once,
- *    in one place. Lifecycle is tied to the [com.wildtrail.app.WildTrailApp]
- *    Application object.
- *  - No Hilt / KSP overhead — appropriate for a teaching project.
- */
 interface AppContainer {
     val authRepository: AuthRepository
     val userRepository: UserRepository
@@ -70,14 +56,6 @@ interface AppContainer {
 
 class DefaultAppContainer(context: Context) : AppContainer {
 
-    /** Application-level scope. Survives configuration changes; cancelled only
-     *  when the process dies. Repositories use it for long-running flow listeners.
-     *
-     *  The [CoroutineExceptionHandler] is a safety net: if a Firestore listener
-     *  (or any other async work in this scope) throws an uncaught exception,
-     *  we log it instead of letting it kill the process. The repositories
-     *  already use `.catch { }`, so this should never actually fire — it only
-     *  guards against bugs / SDK quirks slipping through. */
     private val appScope = CoroutineScope(
         SupervisorJob()
             + Dispatchers.Default
@@ -104,8 +82,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
             },
         )
         .build()
-    // Both the weather proxy and the ML predict endpoint live on the same
-    // PythonAnywhere server, so we share one Retrofit instance.
     private val backendRetrofit = Retrofit.Builder()
         .baseUrl(normalizeBaseUrl(BuildConfig.WEATHER_BACKEND_BASE_URL))
         .client(weatherHttpClient)
@@ -127,9 +103,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
         externalScope = appScope,
     )
 
-    // Declared before userRepository because UserRepository depends on it
-    // (it fans a profile-picture change out onto the user's hike cards), and
-    // `override val`s initialise in declaration order.
     override val hikeLogRepository: HikeLogRepository = HikeLogRepository(
         hikeLogDao = database.hikeLogDao(),
         likeDao = database.likeDao(),

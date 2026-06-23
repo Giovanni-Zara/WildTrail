@@ -39,13 +39,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-/**
- * UI state for the live-tracking screen.
- *
- *  - [routePoints]: the trace as we've collected it so far. Drawn as a
- *                   polyline on the map and used to compute distance / gain.
- *  - [status]:      finite-state machine for IDLE → RECORDING → PAUSED → STOPPED.
- */
 data class TrackingUiState(
     val status: TrackingStatus = TrackingStatus.IDLE,
     val routePoints: List<GeoPoint> = emptyList(),
@@ -56,33 +49,19 @@ data class TrackingUiState(
     val hasPermission: Boolean = false,
     val errorMessage: String? = null,
     val saved: Boolean = false,
-    /** Latest GPS fix, tracked even before "Start hike" so the map can
-     *  center on the user instead of showing a "waiting for GPS" box. */
     val currentLocation: GeoPoint? = null,
-    /** Photos / voice notes captured during the current session. Persisted
-     *  onto the hike when the user saves; cleared if they discard. */
     val mediaItems: List<HikeMediaItem> = emptyList(),
-    /** True while [AudioRecorder] is active — drives the UI button state. */
     val isRecordingAudio: Boolean = false,
-    /** Non-null while the fall-detection emergency overlay is showing. Source
-     *  of truth for the overlay (survives recomposition / rotation) and the
-     *  gate that keeps fall detection suppressed until the user resumes. */
     val emergency: EmergencyUiState? = null,
 )
 
-/** State backing the full-screen emergency overlay shown after a fall. */
 data class EmergencyUiState(
-    /** Who the placeholder emergency call is addressed to (the user's primary
-     *  fall-notify [com.wildtrail.app.domain.model.EmergencyContact], or a
-     *  generic fallback label). */
     val contactName: String,
-    /** Countdown length before the call is auto-placed. */
     val countdownSeconds: Int = EMERGENCY_COUNTDOWN_SECONDS,
 )
 
 enum class TrackingStatus { IDLE, RECORDING, PAUSED, STOPPED }
 
-/** Default emergency countdown, exposed so the overlay and VM agree. */
 const val EMERGENCY_COUNTDOWN_SECONDS = 15
 
 class TrackingViewModel(
@@ -99,21 +78,13 @@ class TrackingViewModel(
     private val _uiState = MutableStateFlow(TrackingUiState())
     val uiState: StateFlow<TrackingUiState> = _uiState.asStateFlow()
 
-    /** One-shot UI events (the spec's "NavigationEvent" channel). Buffered so
-     *  an emit never blocks the VM even if the UI isn't collecting yet. */
     private val _events = Channel<TrackingEvent>(Channel.BUFFERED)
     val events: Flow<TrackingEvent> = _events.receiveAsFlow()
 
-    /** Current location-collection job; cancelled on pause/stop. */
     private var locationJob: Job? = null
 
-    /** Fall-detection collection job. Launched only while RECORDING and
-     *  cancelled the moment we leave it — that gate is what stops a second
-     *  fall from firing while the emergency overlay is up. */
     private var fallDetectionJob: Job? = null
 
-    /** Lightweight location collection that runs *before* recording so the
-     *  map has a position to show. Cancelled once real recording starts. */
     private var previewJob: Job? = null
     private var startTimeMs: Long = 0L
     private var elapsedBeforePauseMs: Long = 0L
@@ -129,11 +100,6 @@ class TrackingViewModel(
         if (granted) startLocationPreview()
     }
 
-    /**
-     * Stream the user's position while we're idle so the map can center on
-     * them immediately. Only touches [TrackingUiState.currentLocation] — the
-     * recorded route is owned by [beginCollecting]; this never adds points.
-     */
     private fun startLocationPreview() {
         if (previewJob?.isActive == true) return
         previewJob = viewModelScope.launch {
@@ -162,7 +128,6 @@ class TrackingViewModel(
         }
         startTimeMs = System.currentTimeMillis()
         elapsedBeforePauseMs = 0L
-        // The recording collector takes over location; stop the idle preview.
         previewJob?.cancel()
         _uiState.update { it.copy(status = TrackingStatus.RECORDING, routePoints = emptyList(), errorMessage = null) }
         beginCollecting()
@@ -180,7 +145,6 @@ class TrackingViewModel(
 
     fun resume() {
         if (_uiState.value.status != TrackingStatus.PAUSED) return
-        // Don't resume into recording while the emergency overlay is still up.
         if (_uiState.value.emergency != null) return
         startTimeMs = System.currentTimeMillis()
         _uiState.update { it.copy(status = TrackingStatus.RECORDING) }
@@ -198,14 +162,6 @@ class TrackingViewModel(
         _uiState.update { it.copy(status = TrackingStatus.STOPPED) }
     }
 
-    // ----------------------- Fall detection ----------------------------------
-
-    /**
-     * Begin collecting [DetectFallUseCase]. The activation gate is structural:
-     * this is only ever called when entering RECORDING, and [stopFallDetection]
-     * is called the instant we leave it (pause / stop / fall), so the use case
-     * is never collected outside an active recording.
-     */
     private fun startFallDetection() {
         if (fallDetectionJob?.isActive == true) return
         Log.d(TAG, "Fall detection ACTIVE (recording started)")
@@ -224,11 +180,6 @@ class TrackingViewModel(
         fallDetectionJob = null
     }
 
-    /**
-     * Fall confirmed. Pause the trek (timer + GPS), then raise the emergency
-     * overlay. We leave RECORDING *synchronously* via [pause] first so the
-     * activation gate immediately suppresses any further fall events.
-     */
     private fun onFallDetected() {
         if (_uiState.value.status != TrackingStatus.RECORDING) return
         Log.w(TAG, "onFallDetected(): fall confirmed by sensors")
@@ -236,22 +187,12 @@ class TrackingViewModel(
         raiseEmergency()
     }
 
-    /**
-     * Debug-only entry point (wired to a hidden button in debug builds) that
-     * raises the emergency overlay without a real fall — lets you verify the
-     * haptics / voice prompt / countdown / swipe-to-cancel end to end.
-     */
     fun simulateFall() {
         Log.w(TAG, "simulateFall(): manually raising emergency overlay (debug)")
         if (_uiState.value.status == TrackingStatus.RECORDING) pause()
         raiseEmergency()
     }
 
-    /**
-     * Resolve the contact and show the overlay. The lookup + state update run
-     * in a coroutine that is a child of [viewModelScope] (not the
-     * fall-collection job), so it survives that job's cancellation in [pause].
-     */
     private fun raiseEmergency() {
         if (_uiState.value.emergency != null) return
         viewModelScope.launch {
@@ -261,25 +202,16 @@ class TrackingViewModel(
         }
     }
 
-    /** Swipe-to-cancel on the overlay: abort the emergency. Per spec the trek
-     *  stays PAUSED — the user must explicitly resume. */
     fun onEmergencyCancelled() {
         _uiState.update { it.copy(emergency = null) }
     }
 
-    /** Countdown reached zero with no cancellation → place the (placeholder)
-     *  emergency call and dismiss the overlay (trek stays PAUSED). */
     fun onEmergencyCountdownFinished() {
         val contactName = _uiState.value.emergency?.contactName ?: return
         initiateEmergencyCall(contactName)
         _uiState.update { it.copy(emergency = null) }
     }
 
-    /**
-     * Placeholder for the real telephony action (deliberately **not**
-     * `ACTION_CALL`). For now it logs and asks the UI to show a Toast; the
-     * real `Intent` is wired up later.
-     */
     private fun initiateEmergencyCall(contactName: String) {
         Log.w(TAG, "initiateEmergencyCall(): emergency call would be placed to '$contactName'")
         viewModelScope.launch { _events.send(TrackingEvent.EmergencyCallPlaced(contactName)) }
@@ -294,12 +226,6 @@ class TrackingViewModel(
         return chosen?.name ?: DEFAULT_CONTACT_LABEL
     }
 
-    /**
-     * Persist the recorded hike. The "characteristics" (difficulty, mud, …)
-     * are filled in by the creator at save time and live on the [HikeLog]
-     * itself; *other* users then leave [com.wildtrail.app.domain.model.TrailReview]s
-     * whose `overallRating`s are averaged into [HikeLog.averageRating].
-     */
     fun saveHike(
         title: String,
         description: String?,
@@ -321,10 +247,6 @@ class TrackingViewModel(
         val now = System.currentTimeMillis()
         val durationSec = state.durationSec
         viewModelScope.launch {
-            // authState.user is a snapshot captured at sign-in (it never
-            // re-emits on Room changes), so a profile picture set/changed
-            // afterwards isn't on it. Read the live Room user so the picture
-            // is denormalised onto the hike and shows on every card preview.
             val creator = runCatching { userRepository.getUser(auth.user.firebaseUid) }
                 .getOrNull() ?: auth.user
             val hike = HikeLog(
@@ -361,10 +283,6 @@ class TrackingViewModel(
             )
             runCatching {
                 hikeLogRepository.saveHike(hike)
-                // Bump the cached user totals so the Profile screen reflects
-                // the new hike count / XP / level immediately. Wrapped in a
-                // separate runCatching so a failure here can't cause the
-                // user to see "Could not save hike" when the hike *was* saved.
                 runCatching {
                     userRepository.incrementHikeStats(
                         uid = creator.firebaseUid,
@@ -381,8 +299,6 @@ class TrackingViewModel(
     }
 
     fun resetAfterSave() {
-        // If the user discarded mid-recording with an active audio capture,
-        // make sure the MediaRecorder is released so the mic isn't held.
         if (_uiState.value.isRecordingAudio) runCatching { audioRecorder.stop() }
         stopFallDetection()
         val granted = locationTracker.hasLocationPermission()
@@ -390,13 +306,6 @@ class TrackingViewModel(
         if (granted) startLocationPreview()
     }
 
-    // ---------------- Sensor capture: photos & audio --------------------
-
-    /**
-     * Persist a photo taken from the system camera and tag it with the user's
-     * current GPS position so it can be pinned on the map when the hike is
-     * later viewed.
-     */
     fun capturePhoto(bitmap: Bitmap) {
         val location = _uiState.value.currentLocation ?: run {
             _uiState.update { it.copy(errorMessage = "No GPS fix yet — try again in a moment") }
@@ -412,7 +321,6 @@ class TrackingViewModel(
         }
     }
 
-    /** Begin recording audio from the device microphone. */
     fun startAudioRecording() {
         if (_uiState.value.isRecordingAudio) return
         val target = mediaStore.newAudioFile()
@@ -423,7 +331,6 @@ class TrackingViewModel(
             }
     }
 
-    /** Stop the in-flight audio recording and tag the resulting file. */
     fun stopAudioRecording() {
         if (!_uiState.value.isRecordingAudio) return
         viewModelScope.launch {
@@ -490,7 +397,6 @@ class TrackingViewModel(
     companion object {
         private const val TAG = "TrackingViewModel"
 
-        /** Fallback when the user has configured no fall-notify contact. */
         private const val DEFAULT_CONTACT_LABEL = "Emergency Services"
 
         fun factory(): ViewModelProvider.Factory = viewModelFactory {

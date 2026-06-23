@@ -38,7 +38,6 @@ fun AchievementDefinition.toEntity(): AchievementDefinitionEntity = AchievementD
     thresholdValue = thresholdValue,
 )
 
-/** UNIQUE on (userUid, achievementId). No FK — cross-device. */
 @Entity(
     tableName = "user_achievements",
     primaryKeys = ["userUid", "achievementId"],

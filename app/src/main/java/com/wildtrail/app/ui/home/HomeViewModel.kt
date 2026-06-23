@@ -44,9 +44,6 @@ class HomeViewModel(
     private val currentUidFlow = authRepository.authState
         .map { (it as? AuthState.SignedIn)?.user?.firebaseUid }
 
-    /** Observed-from-Room user. Crucially this re-emits whenever the user
-     *  row changes — e.g. after [com.wildtrail.app.data.repository.UserRepository.incrementHikeStats]
-     *  bumps the totals when a hike is saved. */
     private val currentUser: Flow<User?> = currentUidFlow
         .flatMapLatest { uid ->
             if (uid == null) flowOf(null) else userRepository.observeUser(uid)

@@ -10,8 +10,6 @@ import com.wildtrail.app.domain.model.TrailReview
 import com.wildtrail.app.domain.model.UserAchievement
 import com.wildtrail.app.domain.model.UserFollow
 
-// --- Reviews -------------------------------------------------------------
-
 data class TrailReviewDto(
     var reviewId: String = "",
     var reviewerUid: String = "",
@@ -60,8 +58,6 @@ fun TrailReview.toDto() = TrailReviewDto(
     createdAt = createdAt,
 )
 
-// --- Social --------------------------------------------------------------
-
 data class UserFollowDto(
     var followerUid: String = "",
     var followeeUid: String = "",
@@ -82,8 +78,6 @@ data class FollowedTrailDto(
 fun FollowedTrailDto.toDomain() = FollowedTrail(userUid, hikeId, notifyOnNewReview, createdAt)
 fun FollowedTrail.toDto() = FollowedTrailDto(userUid, hikeId, notifyOnNewReview, createdAt)
 
-// --- Comments ------------------------------------------------------------
-
 data class HikeCommentDto(
     var commentId: String = "",
     var authorUid: String = "",
@@ -95,8 +89,6 @@ data class HikeCommentDto(
 
 fun HikeCommentDto.toDomain() = HikeComment(commentId, authorUid, hikeId, text, photoUrls, createdAt)
 fun HikeComment.toDto() = HikeCommentDto(commentId, authorUid, hikeId, text, photoUrls, createdAt)
-
-// --- Achievements --------------------------------------------------------
 
 data class AchievementDefinitionDto(
     var achievementId: String = "",
@@ -131,8 +123,6 @@ data class UserAchievementDto(
 fun UserAchievementDto.toDomain() = UserAchievement(userUid, achievementId, earnedAt)
 fun UserAchievement.toDto() = UserAchievementDto(userUid, achievementId, earnedAt)
 
-// --- Emergency contacts --------------------------------------------------
-
 data class EmergencyContactDto(
     var contactId: String = "",
     var userUid: String = "",
@@ -150,8 +140,6 @@ fun EmergencyContactDto.toDomain() = EmergencyContact(
 fun EmergencyContact.toDto() = EmergencyContactDto(
     contactId, userUid, name, phoneNumber, relationship, isPrimary, notifyOnFall,
 )
-
-// --- Likes ---------------------------------------------------------------
 
 data class LikeDto(
     var userUid: String = "",

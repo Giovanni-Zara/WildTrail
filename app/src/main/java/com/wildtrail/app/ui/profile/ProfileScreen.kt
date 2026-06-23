@@ -188,8 +188,6 @@ fun ProfileContent(
                         )
                     }
                 } else {
-                    // earnedAchievements is ordered most-recent-first by the
-                    // DAO, so take(2) = the last two unlocked.
                     items(
                         state.earnedAchievements.take(2),
                         key = { it.achievementId },
@@ -232,7 +230,6 @@ private fun ProfileHeader(user: User) {
     AuroraHeader(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Avatar in a frosted ring so it reads on the gradient.
                 Box(
                     modifier = Modifier
                         .size(84.dp)

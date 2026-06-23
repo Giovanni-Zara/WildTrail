@@ -134,7 +134,6 @@ fun HikeDetailContent(
 ) {
     var refreshing by remember { mutableStateOf(false) }
 
-    // Drive the indicator from a coroutine so it animates for a real moment.
     LaunchedEffect(refreshing) {
         if (refreshing) {
             onRefresh()
@@ -274,10 +273,6 @@ private fun HikeDetailBody(
                 )
             }
             item { CharacteristicsCard(hike) }
-            // Community rating, with an inline "Add review" button to its right
-            // while the viewer can still review. Once they've reviewed (or on
-            // their own hike) the button disappears and the rating card expands
-            // to span the full width.
             val myReview = state.reviews.firstOrNull { it.reviewerUid == state.currentUserUid }
             val canAddReview =
                 !state.isMyHike && state.currentUserUid != null && myReview == null
@@ -288,9 +283,6 @@ private fun HikeDetailBody(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        // Card takes all the remaining width; the button is kept
-                        // compact with its label stacked on two lines so the
-                        // community-rating card has room to breathe.
                         ReviewStatsCard(hike, modifier = Modifier.weight(1f))
                         Button(
                             onClick = onAddReview,
@@ -308,8 +300,6 @@ private fun HikeDetailBody(
                 }
             }
 
-            // Below the rating: the creator note, or — once submitted — the
-            // user's own review surfaced prominently.
             if (state.isMyHike) {
                 item {
                     Text(
@@ -337,8 +327,6 @@ private fun HikeDetailBody(
                 }
             }
 
-            // AI review summary sits on top of the reviews region. Only shown
-            // when there's actual written text to summarize.
             val hasWrittenReviews = state.reviews.any { !it.commentText.isNullOrBlank() }
             if (hasWrittenReviews) {
                 item {
@@ -349,7 +337,6 @@ private fun HikeDetailBody(
                 }
             }
 
-            // Everyone else's reviews (the user's own is surfaced above).
             val otherReviews = state.reviews.filter { it.reviewerUid != state.currentUserUid }
             item {
                 Text(
@@ -409,11 +396,6 @@ private fun LikeButton(liked: Boolean, count: Int, onClick: () -> Unit) {
     }
 }
 
-/**
- * Uses the hike's *denormalised* creatorUsername / creatorProfilePictureUrl
- * (always available) instead of waiting for the full creator user doc to
- * sync. If we DO have the full doc, we enrich with the level line.
- */
 @Composable
 private fun CreatorBlock(
     hike: HikeLog,
@@ -421,11 +403,6 @@ private fun CreatorBlock(
     isMyHike: Boolean,
     onClick: () -> Unit,
 ) {
-    // Resolution order:
-    //   1. Current user → "You"
-    //   2. denormalised creatorUsername on the hike (filled at save time)
-    //   3. observed creator user document (set by HikeDetailViewModel)
-    //   4. a friendly placeholder
     val displayName = when {
         isMyHike -> "You"
         hike.creatorUsername.isNotBlank() -> hike.creatorUsername
@@ -493,20 +470,6 @@ private fun AvatarFromUrl(url: String?, size: androidx.compose.ui.unit.Dp) {
     }
 }
 
-/**
- * Shows the AI prediction feature inside a Card.
- *
- * The UI has four visual states driven by [PredictionState]:
- *
- *  - [PredictionState.Idle]    → Button "Predict My Time" (disabled if offline)
- *  - [PredictionState.Loading] → Spinner + "Calculating…" text  (button hidden)
- *  - [PredictionState.Success] → Estimated time in large text    (button hidden)
- *  - [PredictionState.Error]   → Error message + "Retry" button
- *
- * Behaviour on re-entry: the ViewModel is recreated each time the user navigates
- * to this screen, so [predictionState] always starts as Idle — the button is
- * always visible the first time the screen is opened.
- */
 @Composable
 private fun PredictionCard(
     predictionState: PredictionState,
@@ -593,24 +556,14 @@ private fun PredictionCard(
     }
 }
 
-/**
- * Photos and voice notes the creator captured during the hike, grouped into
- * a horizontal photo strip and a vertical list of audio notes. The strip
- * scrolls horizontally so even a long hike's worth of pictures fits on a
- * single card without overflowing.
- */
 @Composable
 private fun HikeMediaCard(items: List<HikeMediaItem>) {
-    // Chronological order keeps the on-card photo strip aligned with the
-    // numbered "Photo 1", "Photo 2" map pins.
     val photos = items.filter { it.type == HikeMediaType.PHOTO }
         .sortedBy { it.timestamp }
     val audios = items.filter { it.type == HikeMediaType.AUDIO }
         .sortedBy { it.timestamp }
     val audioController = rememberAudioPlayerController()
 
-    // Currently-expanded photo, if any. Tapping a thumbnail opens the
-    // full-screen viewer with an AI photo description.
     var openedPhotoIndex by remember { mutableStateOf<Int?>(null) }
 
     Card {
@@ -668,7 +621,6 @@ private fun PhotoThumbnail(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        // Small badge so the user can match a thumbnail to its map marker.
         Text(
             "Photo $number",
             style = MaterialTheme.typography.labelSmall,
@@ -681,11 +633,6 @@ private fun PhotoThumbnail(
     }
 }
 
-/**
- * Full-screen viewer for a single hike photo. Triggers an on-device ML Kit
- * label pass when opened and shows the resulting "Looks like: …" sentence
- * below the image. No network or API key is involved.
- */
 @Composable
 private fun PhotoViewerDialog(
     photo: HikeMediaItem,
@@ -798,7 +745,6 @@ private fun PhotoViewerDialog(
     }
 }
 
-/** Per-recording state for the on-device BirdNET scan (UI-local, ephemeral). */
 private sealed interface BirdScanState {
     data object Idle : BirdScanState
     data object Scanning : BirdScanState
@@ -816,7 +762,6 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
         (context.applicationContext as WildTrailApp).container.birdNetClassifier
     }
     val scope = rememberCoroutineScope()
-    // Keyed by audio.id so a recycled row doesn't inherit another clip's result.
     var scan by remember(audio.id) { mutableStateOf<BirdScanState>(BirdScanState.Idle) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -840,7 +785,6 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Two-line "Detect / Bird" button that runs BirdNET on this clip.
             Button(
                 onClick = {
                     if (scan !is BirdScanState.Scanning) {
@@ -879,7 +823,6 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
             }
         }
 
-        // Result line beneath the row.
         when (val s = scan) {
             is BirdScanState.Found -> {
                 val top = s.birds.first()
@@ -981,13 +924,6 @@ private fun CharacteristicLine(label: String, value: Int) {
     }
 }
 
-/**
- * Stateless AI review-summary card. Shows an "AI summary" button while idle;
- * tapping it is the ONLY trigger for inference. While the backend LLM is
- * "thinking" it shows a spinner; on success the generated text replaces the
- * button. The summary auto-disposes when the user leaves the screen because
- * the ViewModel (and its [ReviewSummaryState]) is recreated on re-entry.
- */
 @Composable
 private fun ReviewSummaryCard(
     state: ReviewSummaryState,
@@ -1026,9 +962,7 @@ private fun ReviewSummaryCard(
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 2.5.dp,
                     )
-                    // Once we have a summary the button is intentionally gone.
                     is ReviewSummaryState.Success -> Unit
-                    // Idle or Error → offer the (re)try button.
                     else -> Button(onClick = onSummarize) { Text("AI summary") }
                 }
             }
@@ -1085,7 +1019,6 @@ private fun ReviewStatsCard(hike: HikeLog, modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Dynamic Canvas gauge for the headline score.
                 RatingGauge(
                     rating = hike.averageRating,
                     modifier = Modifier.size(76.dp),
@@ -1131,7 +1064,6 @@ private fun ReviewRow(
     onAuthorClick: () -> Unit,
     highlighted: Boolean = false,
 ) {
-    // Index of the review photo opened in the full-screen viewer, if any.
     var openedPhoto by remember { mutableStateOf<Int?>(null) }
 
     Card(
@@ -1149,7 +1081,6 @@ private fun ReviewRow(
         shape = RoundedCornerShape(20.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ----- Header: avatar + username + date + gradient score badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
@@ -1178,7 +1109,6 @@ private fun ReviewRow(
 
             Spacer(Modifier.height(14.dp))
 
-            // ----- Pill grid of trail conditions ------------------------
             androidx.compose.foundation.layout.FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1195,14 +1125,12 @@ private fun ReviewRow(
                 )
             }
 
-            // ----- Optional free-text feedback --------------------------
             val comment = review.commentText
             if (!comment.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
                 Text(comment, style = MaterialTheme.typography.bodyMedium)
             }
 
-            // ----- Optional photo strip (tap to open full-screen) -------
             if (review.imageUrls.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1222,7 +1150,6 @@ private fun ReviewRow(
         }
     }
 
-    // Full-screen, swipeable viewer for the tapped review photo.
     openedPhoto?.let { idx ->
         FullScreenPhotoViewer(
             imageUrls = review.imageUrls,
@@ -1232,10 +1159,6 @@ private fun ReviewRow(
     }
 }
 
-/**
- * Compact gradient "score badge" shown in a review's header — a brand-coloured
- * [Brush.linearGradient] pill with a gold star and the headline rating.
- */
 @Composable
 private fun ScoreBadge(rating: Int) {
     Box(

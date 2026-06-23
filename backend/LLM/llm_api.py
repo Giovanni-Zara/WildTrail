@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 current_dir = Path(__file__).resolve().parent
-#Risali di due cartelle
 project_root = current_dir.parent.parent
 sys.path.append(str(project_root))
 

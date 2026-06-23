@@ -29,21 +29,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/**
- * List-friendly preview of a hike's GPS route, drawn over a **static map
- * background** for geographic context.
- *
- * It uses the Google Maps **lite mode**: the map renders as a single static
- * bitmap with no gesture handling, which is the approach Google recommends for
- * showing many maps in a scrolling list (a full interactive
- * [com.google.maps.android.compose.GoogleMap] allocates a heavy SurfaceView and
- * janks badly with 20+ in a LazyColumn). The interactive, zoomable map lives on
- * the full hike-detail screen ([RouteMap]); this preview is intentionally fixed.
- *
- * The camera (centre + zoom) is computed once from the route's bounding box and
- * the thumbnail's pixel size so the **entire segment is always framed** with a
- * little padding — never cropped, never interactive.
- */
 @Composable
 fun RouteThumbnail(
     points: List<GeoPoint>,
@@ -55,8 +40,6 @@ fun RouteThumbnail(
     BoxWithConstraints(modifier = modifier.clip(RoundedCornerShape(8.dp))) {
         val latLngs = remember(points) { points.map { LatLng(it.lat, it.lng) } }
 
-        // Degenerate route (caller normally guards size >= 2): just show the
-        // neutral backdrop rather than a misframed world map.
         if (latLngs.size < 2 || !constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
             Box(Modifier.fillMaxSize().background(backdrop))
             return@BoxWithConstraints
@@ -70,8 +53,6 @@ fun RouteThumbnail(
             CameraPosition.fromLatLngZoom(bounds.center, boundsZoom(bounds, widthPx, heightPx))
         }
 
-        // Keyed on the computed camera so a recycled list slot reused for a
-        // different hike always renders that hike's viewport, never a stale one.
         val cameraPositionState = remember(camera) { CameraPositionState(position = camera) }
 
         GoogleMap(
@@ -81,15 +62,12 @@ fun RouteThumbnail(
             properties = MapProperties(mapType = MapType.NORMAL),
             uiSettings = NonInteractiveUiSettings,
         ) {
-            // White casing under the brand line keeps the route legible over
-            // busy map tiles (the standard cartographic "route" treatment).
             Polyline(points = latLngs, color = Color.White, width = 10f)
             Polyline(points = latLngs, color = brand, width = 6f)
         }
     }
 }
 
-/** Every gesture and control disabled — a fixed, non-interactive map. */
 private val NonInteractiveUiSettings = MapUiSettings(
     compassEnabled = false,
     indoorLevelPickerEnabled = false,
@@ -106,14 +84,8 @@ private val NonInteractiveUiSettings = MapUiSettings(
 private const val WORLD_PX = 256.0
 private const val MAX_ZOOM = 19.0
 
-/** Leaves ~22% margin so the route sits comfortably inside the frame. */
 private const val PADDING_FACTOR = 0.78
 
-/**
- * Smallest zoom at which [bounds] fits inside a [widthPx] × [heightPx] viewport,
- * using the standard Web-Mercator "fit bounds" derivation. Returns a fixed
- * zoom suitable for a non-interactive snapshot.
- */
 private fun boundsZoom(bounds: LatLngBounds, widthPx: Int, heightPx: Int): Float {
     val ne = bounds.northeast
     val sw = bounds.southwest
@@ -122,8 +94,6 @@ private fun boundsZoom(bounds: LatLngBounds, widthPx: Int, heightPx: Int): Float
     val lngDiff = ne.longitude - sw.longitude
     val lngFraction = (if (lngDiff < 0) lngDiff + 360.0 else lngDiff) / 360.0
 
-    // A span of ~0 in one axis (single point, or a perfectly straight N-S/E-W
-    // trace) would blow up the log; fall back to the max zoom for that axis.
     val latZoom = if (latFraction <= 0.0) MAX_ZOOM else zoomFor(heightPx * PADDING_FACTOR, latFraction)
     val lngZoom = if (lngFraction <= 0.0) MAX_ZOOM else zoomFor(widthPx * PADDING_FACTOR, lngFraction)
 

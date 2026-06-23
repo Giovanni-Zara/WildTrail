@@ -8,8 +8,6 @@ import pandas as pd
 
 SURFACE_TYPES = ["forest", "mountain", "mixed", "road"]
 
-# Pacing penalty by surface -- unrelated to steepness, just how much slower
-# you move per mile on that surface type (root cause of duration, not difficulty).
 SURFACE_TIME_MULTIPLIER = {
     "road": 1.0,
     "forest": 1.08,
@@ -19,11 +17,6 @@ SURFACE_TIME_MULTIPLIER = {
 
 DIFFICULTY_LABELS = {1: "easy", 2: "moderate", 3: "challenging", 4: "hard", 5: "expert"}
 
-# Feet of elevation gain per mile of trail, banded by difficulty rating.
-# This is what makes difficulty independent of length: a 0.1-mile trail and a
-# 20-mile trail can both land in the difficulty-5 band, because grade (steepness)
-# doesn't care how long the trail is. Bands overlap slightly so the transition
-# between ratings isn't a hard cliff.
 GRADE_FT_PER_MILE_BY_DIFFICULTY = {
     1: (0, 60),
     2: (40, 150),
@@ -32,19 +25,11 @@ GRADE_FT_PER_MILE_BY_DIFFICULTY = {
     5: (450, 900),
 }
 
-MAX_ELEVATION_GAIN_FT = 7000.0  # sanity cap (~ a hard single-day mountain push)
-# Safety floor only -- not a realism clamp. With every multiplier in the formula
-# being >=1.0, duration is already strictly positive from the physics; this just
-# guards against the noise term producing a degenerate near-zero value. Set low
-# enough (15 sec) that it almost never actually triggers -- a real clamp here
-# recreates the exact bug we're fixing, just at a smaller scale.
+MAX_ELEVATION_GAIN_FT = 7000.0
 MIN_DURATION_MIN = 0.25
 
 
 def make_length_bins(length_min: float, length_max: float, n_bins: int) -> list[tuple[float, float]]:
-    """Log-spaced bins so we get just as much density in the 0.05-0.5mi range
-    as in the 10-40mi range, instead of uniform/linear bins wasting most of
-    their resolution on the long tail."""
     edges = np.geomspace(length_min, length_max, n_bins + 1)
     return list(zip(edges[:-1], edges[1:]))
 
@@ -57,17 +42,10 @@ def generate_cell(
     surface: str,
     rng: np.random.Generator,
 ) -> pd.DataFrame:
-    """Generate n rows for one (length-bin, difficulty, surface) cell.
-    Every cell uses the same generative formula -- only the sampling ranges
-    change -- so the duration relationship stays consistent across the whole
-    feature space (no special-cased "short hike" logic to drift out of sync)."""
-
     length = rng.uniform(length_lo, length_hi, n)
 
     grade_lo, grade_hi = GRADE_FT_PER_MILE_BY_DIFFICULTY[difficulty]
     grade = rng.uniform(grade_lo, grade_hi, n)
-    # Multiplicative (not additive) noise: keeps elevation_gain proportional
-    # even when length is tiny, instead of being swamped by a fixed-size noise term.
     elevation_gain = length * grade * rng.normal(1.0, 0.08, n)
     elevation_gain = np.clip(elevation_gain, 0, MAX_ELEVATION_GAIN_FT)
 
@@ -126,8 +104,6 @@ def generate_dataset(
                 frames.append(generate_cell(rows_per_cell, length_lo, length_hi, difficulty, surface, rng))
 
     dataset = pd.concat(frames, ignore_index=True)
-    # Shuffle so row order doesn't leak the stratification structure to anything
-    # downstream that isn't expecting it (e.g. a naive non-shuffled train/test split).
     dataset = dataset.sample(frac=1.0, random_state=seed).reset_index(drop=True)
     return dataset
 

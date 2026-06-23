@@ -18,11 +18,6 @@ import com.wildtrail.app.ui.review.SubmitReviewRoute
 import com.wildtrail.app.ui.settings.SettingsRoute
 import com.wildtrail.app.ui.tracking.TrackingRoute
 
-/**
- * Navigation graph: an Auth sub-graph and a Main sub-graph. The MainGraph
- * also exposes a `profile/{uid}` route used by clickable usernames in
- * reviews, comments, and hike-card creator rows.
- */
 @Composable
 fun WildTrailNavGraph(
     navController: NavHostController,
@@ -39,7 +34,6 @@ fun WildTrailNavGraph(
         navController = navController,
         startDestination = startDestination,
     ) {
-        // ---------- Auth sub-graph ----------
         navigation(
             route = Destination.AuthGraph.route,
             startDestination = Destination.Login.route,
@@ -49,7 +43,6 @@ fun WildTrailNavGraph(
             }
         }
 
-        // ---------- Main sub-graph ----------
         navigation(
             route = Destination.MainGraph.route,
             startDestination = Destination.Home.route,

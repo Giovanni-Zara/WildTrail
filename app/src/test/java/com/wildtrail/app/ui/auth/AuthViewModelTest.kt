@@ -18,10 +18,6 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Tests for [AuthViewModel] using a [FakeAuthRepository] that extends the
- * real [AuthRepository] and overrides only the methods the ViewModel calls.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
 
@@ -41,10 +37,6 @@ class AuthViewModelTest {
         Dispatchers.resetMain()
     }
 
-    /**
-     * Initial state should be empty + login mode.
-     * EXPECTED: AuthUiState() (defaults).
-     */
     @Test
     fun `initial state is the default`() = runTest {
         viewModel.uiState.test {
@@ -56,11 +48,6 @@ class AuthViewModelTest {
         }
     }
 
-    /**
-     * Submitting with an empty email should set an error message and not
-     * touch the repository.
-     * EXPECTED: errorMessage is non-null AND no signIn / signUp call.
-     */
     @Test
     fun `submit with empty fields sets validation error`() = runTest {
         viewModel.submit()
@@ -70,10 +57,6 @@ class AuthViewModelTest {
         assertEquals(0, fakeRepo.signUpCalls)
     }
 
-    /**
-     * Submitting valid credentials in login mode calls signIn exactly once.
-     * EXPECTED: signInCalls == 1.
-     */
     @Test
     fun `submit triggers signIn in login mode`() = runTest {
         viewModel.onEmailChanged("a@b.com")
@@ -83,10 +66,6 @@ class AuthViewModelTest {
         assertEquals(0, fakeRepo.signUpCalls)
     }
 
-    /**
-     * Submitting valid credentials in sign-up mode calls signUp exactly once.
-     * EXPECTED: signUpCalls == 1.
-     */
     @Test
     fun `submit triggers signUp in signUp mode`() = runTest {
         viewModel.toggleMode()
@@ -101,10 +80,6 @@ class AuthViewModelTest {
         assertEquals(1, fakeRepo.signUpCalls)
     }
 
-    /**
-     * Repository failure surfaces as errorMessage on the state.
-     * EXPECTED: errorMessage == "Invalid credentials".
-     */
     @Test
     fun `repository failure populates errorMessage`() = runTest {
         fakeRepo.nextResult = Result.failure(IllegalStateException("Invalid credentials"))
@@ -115,10 +90,6 @@ class AuthViewModelTest {
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
-    /**
-     * Repository success keeps errorMessage null and isLoading false at rest.
-     * EXPECTED: errorMessage is null after a successful sign-in.
-     */
     @Test
     fun `repository success leaves errorMessage null`() = runTest {
         fakeRepo.nextResult = Result.success(testUser())

@@ -90,9 +90,6 @@ fun TrackingRoute(
         trackingViewModel.onPermissionResult(permissions.allPermissionsGranted)
     }
 
-    // One-shot tracking events. The emergency overlay's *visibility* is driven
-    // by state (below); these events cover transient signals like the
-    // placeholder "call placed" Toast.
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         trackingViewModel.events.collect { event ->
@@ -141,8 +138,6 @@ fun TrackingRoute(
             if (!state.hasPermission) {
                 PermissionBanner(onRequest = { permissions.launchMultiplePermissionRequest() })
             }
-            // Live map preview: visible only when we have permission so the
-            // map doesn't request location services before the user opts in.
             if (state.hasPermission) {
                 androidx.compose.material3.Card(
                     modifier = Modifier
@@ -174,9 +169,6 @@ fun TrackingRoute(
                 onStop = trackingViewModel::stop,
             )
 
-            // Photo + voice-note capture is only meaningful while a hike is
-            // actively being recorded (i.e. there's a "current position" to
-            // tag a photo/audio with). Hidden otherwise to keep the UI tidy.
             if (state.status == TrackingStatus.RECORDING ||
                 state.status == TrackingStatus.PAUSED
             ) {
@@ -229,9 +221,6 @@ fun TrackingRoute(
         }
     }
 
-    // Full-screen emergency overlay, shown above everything (incl. the bottom
-    // bar) whenever a fall has been confirmed. Visibility is state-driven so it
-    // survives recomposition / rotation.
     state.emergency?.let { emergency ->
         EmergencyOverlay(
             contactName = emergency.contactName,
@@ -486,9 +475,6 @@ private fun ControlButtons(
             onClick = onStart,
             enabled = hasPermission,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            // Force brand colours so the button stays visible on every device,
-            // including phones where Material You would otherwise tone the
-            // primary down to something close to the surface.
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -528,10 +514,6 @@ private fun ControlButtons(
     }
 }
 
-/**
- * Aggregated request for [TrackingViewModel.saveHike] — keeps the dialog
- * callback signature short.
- */
 private data class SaveHikeRequest(
     val title: String,
     val description: String?,
@@ -563,10 +545,6 @@ private fun SaveHikeDialog(
     var animal by remember { mutableStateOf(3) }
     var water by remember { mutableStateOf(false) }
 
-    // Every field except the description is mandatory. The rating chips,
-    // surface type and switches always carry a value, so the only field
-    // that can actually be left empty is the title — guard the Save button
-    // on it and surface an inline error.
     val isFormValid = title.isNotBlank()
 
     AlertDialog(
@@ -680,15 +658,6 @@ private fun formatDuration(seconds: Long): String {
     return "%d:%02d:%02d".format(h, m, s)
 }
 
-/**
- * Side-by-side camera + microphone buttons that appear during an active
- * recording. The camera button launches the system camera (returns a
- * preview-resolution Bitmap which we save to internal storage). The mic
- * button is a single tap-to-start / tap-to-stop toggle.
- *
- * Both flows request their respective runtime permission lazily: the
- * permission prompt only appears when the user actually taps the button.
- */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun MediaCaptureRow(
@@ -754,13 +723,8 @@ private fun MediaCaptureRow(
             Text(if (isRecordingAudio) "Stop" else "Audio note")
         }
     }
-
-    // Request automatically retries when the user grants the permission via
-    // the system dialog, so a re-tap starts the camera/mic flow as expected.
 }
 
-/** A horizontal strip of the photos / audio notes captured so far in this
- *  recording session — gives the user immediate feedback that capture worked. */
 @Composable
 private fun CapturedMediaStrip(items: List<HikeMediaItem>) {
     Column(

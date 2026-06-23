@@ -33,20 +33,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-/**
- * Represents every possible state of the AI time prediction.
- *
- * Why a sealed interface?
- *   It forces the UI to handle every case explicitly (like a type-safe switch).
- *   The `when` expression in Compose won't compile unless all branches are covered.
- *
- * State machine:
- *   Idle → (button pressed) → Loading → Success(minutes)
- *                                      → Error(message) → (retry) → Loading
- *
- * The state resets to Idle each time the user navigates away and back,
- * because the ViewModel is recreated with each new navigation back-stack entry.
- */
 sealed interface PredictionState {
     data object Idle : PredictionState
     data object Loading : PredictionState
@@ -54,11 +40,6 @@ sealed interface PredictionState {
     data class Error(val message: String) : PredictionState
 }
 
-/**
- * State of the on-demand AI review summary. Like [PredictionState] it starts
- * Idle, and because the ViewModel is recreated on each navigation to the
- * screen, the summary auto-disposes when the user leaves the hike.
- */
 sealed interface ReviewSummaryState {
     data object Idle : ReviewSummaryState
     data object Loading : ReviewSummaryState
@@ -67,8 +48,6 @@ sealed interface ReviewSummaryState {
 }
 
 data class HikeDetailUiState(
-    /** Distinct from `hike == null` so the UI can tell "still loading" from
-     *  "loaded but the hike doesn't exist". */
     val loading: Boolean = true,
     val hike: HikeLog? = null,
     val creator: User? = null,
@@ -82,16 +61,6 @@ data class HikeDetailUiState(
     val myReviewExists: Boolean = false,
 )
 
-/**
- * Decoupled state design:
- *  - The core [uiState] flow combines only the *required* pieces (hike,
- *    reviews, comments, likes, current uid). It emits as soon as Room
- *    answers — usually <50 ms — so the screen never gets stuck on
- *    "Loading hike…".
- *  - The creator user + the comment/review authors are looked up in a
- *    *separate* side-channel flow that we merge in only when it has data.
- *    A slow / missing creator profile never blocks the hike itself.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HikeDetailViewModel(
     private val hikeId: String,
@@ -103,32 +72,10 @@ class HikeDetailViewModel(
     private val getReviewSummaryUseCase: GetReviewSummaryUseCase,
 ) : ViewModel() {
 
-    // ---------------- Prediction state ------------------------------------
-
-    /**
-     * Holds the current state of the AI prediction (Idle / Loading / Success / Error).
-     *
-     * It is a separate StateFlow from [uiState] so that updating the prediction
-     * does not retrigger the heavy combine() chain that drives the rest of the screen.
-     * The composable collects both flows independently.
-     */
+    // separate from uiState so prediction/summary updates don't retrigger its big combine
     private val _predictionState = MutableStateFlow<PredictionState>(PredictionState.Idle)
     val predictionState: StateFlow<PredictionState> = _predictionState.asStateFlow()
 
-    /**
-     * Called when the user taps "Predict My Time".
-     *
-     * What happens step by step:
-     *  1. We immediately set the state to Loading so the UI shows a spinner.
-     *  2. We fetch the signed-in user's full profile from Room (fast, already cached).
-     *  3. We call [PredictRepository.predict] which sends the HTTP request to Python Anywhere.
-     *  4. On success → state becomes Success(minutes).
-     *     On any failure → state becomes Error with a human-readable message.
-     *
-     * The whole thing runs inside [viewModelScope], which means:
-     *  - It runs on a background thread (never blocks the UI).
-     *  - It is automatically cancelled if the user navigates away mid-request.
-     */
     fun requestPrediction() {
         val hike = uiState.value.hike ?: return
         val uid  = uiState.value.currentUserUid ?: return
@@ -136,7 +83,6 @@ class HikeDetailViewModel(
         viewModelScope.launch {
             _predictionState.value = PredictionState.Loading
 
-            // Fetch the current user's profile. Room emits immediately from cache.
             val user = userRepository.observeUser(uid).first()
             if (user == null) {
                 _predictionState.value =
@@ -156,17 +102,9 @@ class HikeDetailViewModel(
         }
     }
 
-    // ---------------- AI review summary -----------------------------------
-
     private val _summaryState = MutableStateFlow<ReviewSummaryState>(ReviewSummaryState.Idle)
     val summaryState: StateFlow<ReviewSummaryState> = _summaryState.asStateFlow()
 
-    /**
-     * Triggered only when the user taps "AI summary". Collects the written
-     * review texts currently on screen and offloads summarization to the
-     * backend LLM. A separate StateFlow from [uiState] so it doesn't retrigger
-     * the heavy combine() chain.
-     */
     fun summarizeReviews() {
         if (_summaryState.value is ReviewSummaryState.Loading) return
         val reviewTexts = uiState.value.reviews
@@ -190,13 +128,8 @@ class HikeDetailViewModel(
         }
     }
 
-    // ---------------- Side-channel: cached author lookups ----------------
-
-    /** Mutable cache of every user we've ever displayed in this screen. */
     private val authorsCache = MutableStateFlow<Map<String, User>>(emptyMap())
 
-    /** Track which UIDs we've already kicked off a Firestore lookup for, so
-     *  re-emissions of reviews/comments don't spam observeUser. */
     private val subscribedUids = mutableSetOf<String>()
 
     private fun ensureUserSubscribed(uid: String) {
@@ -210,8 +143,6 @@ class HikeDetailViewModel(
             .launchIn(viewModelScope)
     }
 
-    // ---------------- Core uiState -------------------------------------
-
     private val currentUidFlow = authRepository.authState.map {
         (it as? AuthState.SignedIn)?.user?.firebaseUid
     }
@@ -223,7 +154,6 @@ class HikeDetailViewModel(
     private val commentsFlow = socialRepository.observeComments(hikeId)
         .onEach { cs -> cs.forEach { ensureUserSubscribed(it.authorUid) } }
 
-    /** Pair of (isLikedByMe, likeCount). When signed out, (false, 0). */
     private val likesFlow = currentUidFlow.flatMapLatest { uid ->
         if (uid == null) {
             flowOf(false to 0)
@@ -243,9 +173,6 @@ class HikeDetailViewModel(
         currentUidFlow,
     ) { hike, reviews, comments, likesPair, uid ->
         val (liked, count) = likesPair
-        // Subscribe to the creator's user document (best-effort) so we can
-        // also offer their profile from the detail screen even if they're
-        // not someone the current user has met before.
         if (hike != null) ensureUserSubscribed(hike.creatorFirebaseUid)
         HikeDetailUiState(
             loading = false,

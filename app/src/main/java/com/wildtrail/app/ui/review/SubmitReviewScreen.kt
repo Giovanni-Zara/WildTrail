@@ -67,7 +67,6 @@ import com.wildtrail.app.ui.components.EditableStarRow
 import com.wildtrail.app.ui.components.FullScreenPhotoViewer
 import com.wildtrail.app.ui.components.RatingRow
 
-/** Photo picker cap — keeps a review's gallery a sensible size. */
 private const val MAX_REVIEW_PHOTOS = 5
 
 @Composable
@@ -79,8 +78,6 @@ fun SubmitReviewRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // One-shot: the review saved → return to the hike detail, which recomposes
-    // to show the new review and hide the "Add review" button.
     LaunchedEffect(state.submitted) {
         if (state.submitted) onDone()
     }
@@ -123,8 +120,6 @@ fun SubmitReviewContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Surface submission errors through the Scaffold's snackbar, then clear
-    // the one-shot so it doesn't re-show on recomposition.
     LaunchedEffect(state.error) {
         state.error?.let { message ->
             snackbarHostState.showSnackbar(message)
@@ -155,7 +150,6 @@ fun SubmitReviewContent(
         ) {
             Spacer(Modifier.height(4.dp))
 
-            // ----- Animated gradient hero with the headline star rating -----
             AuroraHeader(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +180,6 @@ fun SubmitReviewContent(
                 }
             }
 
-            // ----- Trail-condition ratings ----------------------------------
             SectionCard(title = "Trail conditions") {
                 RatingRow("Difficulty", state.difficultyLevel, onDifficultyChange)
                 RatingRow("Mud risk", state.mudRisk, onMudChange)
@@ -212,7 +205,6 @@ fun SubmitReviewContent(
                 }
             }
 
-            // ----- Free-text feedback ---------------------------------------
             SectionCard(title = "Your feedback") {
                 OutlinedTextField(
                     value = state.commentText,
@@ -224,7 +216,6 @@ fun SubmitReviewContent(
                 )
             }
 
-            // ----- Photos (tap a thumbnail to preview full-screen) ----------
             SectionCard(title = "Photos") {
                 PhotoPickerSection(
                     imageUris = state.imageUris,
@@ -233,7 +224,6 @@ fun SubmitReviewContent(
                 )
             }
 
-            // ----- Primary / low-emphasis actions ---------------------------
             Button(
                 onClick = onSubmit,
                 enabled = !state.isSubmitting,
@@ -265,7 +255,6 @@ fun SubmitReviewContent(
     }
 }
 
-/** Word used in the hero to echo the headline star rating dynamically. */
 private fun ratingWord(rating: Int): String = when (rating) {
     5 -> "Outstanding"
     4 -> "Great"
@@ -274,10 +263,6 @@ private fun ratingWord(rating: Int): String = when (rating) {
     else -> "Needs work"
 }
 
-/**
- * A soft elevated card with a section title — the building block the review
- * form is grouped into so each topic reads as its own panel.
- */
 @Composable
 private fun SectionCard(
     title: String,
@@ -314,7 +299,6 @@ private fun PhotoPickerSection(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_REVIEW_PHOTOS),
     ) { uris: List<Uri> -> if (uris.isNotEmpty()) onAddImages(uris) }
 
-    // Index of the photo opened in the full-screen previewer, if any.
     var previewIndex by remember { mutableStateOf<Int?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

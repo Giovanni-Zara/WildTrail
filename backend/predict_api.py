@@ -131,11 +131,9 @@ def predict() -> tuple:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    # prediction = float(MODEL_STATE.model.predict(features)[0])
-    # prediction = round(max(prediction, 0.0), 1)
-    
     prediction_log = float(MODEL_STATE.model.predict(features)[0])
-    prediction = float(np.expm1(prediction_log))   # <-- undo the log transform
+    # model trained on log1p(minutes); invert it
+    prediction = float(np.expm1(prediction_log))
     prediction = round(max(prediction, 0.0), 1)
 
     return (

@@ -8,11 +8,6 @@ import androidx.room.Update
 import com.wildtrail.app.data.local.entity.UserEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * DAO for [UserEntity]. Returning [Flow] from queries gives us reactive
- * streams: callers (typically Repositories) get a fresh emission every time
- * the underlying table changes — no manual refresh needed.
- */
 @Dao
 interface UserDao {
 
@@ -28,7 +23,6 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE firebaseUid = :uid LIMIT 1")
     suspend fun getById(uid: String): UserEntity?
 
-    /** Reactive variant of [getById]. */
     @Query("SELECT * FROM users WHERE firebaseUid = :uid LIMIT 1")
     fun observeById(uid: String): Flow<UserEntity?>
 

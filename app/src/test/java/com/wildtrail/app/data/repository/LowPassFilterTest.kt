@@ -14,7 +14,6 @@ class LowPassFilterTest {
         val mean = 9.81f
         val random = Random(seed = 42)
 
-        // A steady signal buried in +/- 2 m/s^2 of white noise.
         val noisy = (0 until 300).map { i ->
             val noise = (random.nextFloat() - 0.5f) * 4f
             SensorSample(x = mean + noise, y = 0f, z = 0f, timestampNs = i * 20_000_000L)
@@ -22,7 +21,6 @@ class LowPassFilterTest {
 
         val filtered = noisy.map { filter.apply(it) }
 
-        // After warm-up the filtered signal is far less jittery...
         val inputVariance = variance(noisy.takeLast(150).map { it.x })
         val outputVariance = variance(filtered.takeLast(150).map { it.x })
         assertTrue(
@@ -30,7 +28,6 @@ class LowPassFilterTest {
             outputVariance < inputVariance / 4f,
         )
 
-        // ...while still tracking the true mean (no DC offset).
         val outputMean = filtered.takeLast(150).map { it.x }.average().toFloat()
         assertEquals(mean, outputMean, 0.5f)
     }
@@ -50,9 +47,8 @@ class LowPassFilterTest {
     fun `converges towards a step input at the expected rate`() {
         val alpha = 0.5f
         val filter = LowPassFilter(alpha = alpha)
-        filter.apply(SensorSample(x = 0f, y = 0f, z = 0f, timestampNs = 0L)) // seed at 0
+        filter.apply(SensorSample(x = 0f, y = 0f, z = 0f, timestampNs = 0L))
 
-        // out += alpha * (in - out): from 0 toward 10 -> 5, then 7.5
         val afterFirst = filter.apply(SensorSample(x = 10f, y = 0f, z = 0f, timestampNs = 1L))
         val afterSecond = filter.apply(SensorSample(x = 10f, y = 0f, z = 0f, timestampNs = 2L))
 

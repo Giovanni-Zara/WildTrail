@@ -48,22 +48,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 
-/**
- * Decorative, animated "aurora" banner drawn with the Canvas API.
- *
- * Implements the dynamic-visual stack the design brief asks for:
- *  - a [Brush.linearGradient] **shader** that continuously slides sideways,
- *    rendered with [TileMode.Mirror] so the band reflects instead of repeating
- *    hard seams;
- *  - the whole layer is animated with **matrix transforms** ([withTransform] →
- *    `rotate` + `scale` + `translate`), the scale providing overscan so the
- *    gentle rotation never reveals the corners;
- *  - a pulsing [Brush.radialGradient] highlight layered on top.
- *
- * Purely cosmetic: [content] is laid over the animation, with a soft vertical
- * scrim for legibility. Colours default to the brand palette but can be
- * overridden so the same banner can theme per-screen.
- */
 @Composable
 fun AuroraHeader(
     modifier: Modifier = Modifier,
@@ -100,8 +84,6 @@ fun AuroraHeader(
         Canvas(modifier = Modifier.matchParentSize()) {
             val w = size.width
             val h = size.height
-            // Slide the gradient origin across the band; TileMode.Mirror means
-            // it bounces back rather than wrapping with a visible seam.
             val shift = (phase - 0.5f) * w * 0.8f
             withTransform({
                 rotate(degrees = angle, pivot = center)
@@ -118,7 +100,6 @@ fun AuroraHeader(
                     size = Size(w, h),
                 )
             }
-            // Pulsing radial sheen that drifts left↔right with the phase.
             drawRect(
                 brush = Brush.radialGradient(
                     colors = listOf(
@@ -129,7 +110,6 @@ fun AuroraHeader(
                     radius = w * 0.75f,
                 ),
             )
-            // Bottom scrim so overlaid text/stars stay legible on any colour.
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)),
@@ -142,19 +122,6 @@ fun AuroraHeader(
     }
 }
 
-/**
- * A circular rating gauge drawn with the Canvas API — a compact "dashboard"
- * element used for headline scores.
- *
- *  - the value arc is painted with a [Brush.sweepGradient] **shader** so the
- *    colour travels along the arc;
- *  - the centred number is drawn through the native canvas with an
- *    `android.graphics.LinearGradient` **shader** set on its `Paint`
- *    ([Shader.TileMode.CLAMP]);
- *  - the fill animates whenever [rating] changes.
- *
- * @param rating current value in `0..max`.
- */
 @Composable
 fun RatingGauge(
     rating: Float,
@@ -230,11 +197,6 @@ fun RatingGauge(
     }
 }
 
-/**
- * Full-screen, swipeable viewer for a set of remote/local image URLs — used to
- * open review photos when a thumbnail is tapped. Pages between [imageUrls] with
- * a [HorizontalPager] and shows a position counter + close affordance.
- */
 @Composable
 fun FullScreenPhotoViewer(
     imageUrls: List<String>,

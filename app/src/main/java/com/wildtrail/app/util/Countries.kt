@@ -1,13 +1,5 @@
 package com.wildtrail.app.util
 
-/**
- * Static (ISO-derived) country list used in the sign-up dropdown. Kept as
- * a plain Kotlin object so it costs nothing to load and is trivial to test.
- *
- * Not exhaustive — covers the major destinations a hiking-app user is
- * likely to come from. The dropdown supports type-to-filter so missing
- * entries can be added cheaply.
- */
 object Countries {
     val ALL: List<String> = listOf(
         "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina",

@@ -12,22 +12,15 @@ import requests
 from flask import Flask, jsonify, request
 from sklearn.ensemble import HistGradientBoostingRegressor
 
-# NOTE: `openai` is imported lazily inside /summarize-reviews so that, if the
-# package isn't installed in the venv yet, only that endpoint fails — the rest
-# of the app (/health, /weather, /predict) keeps serving.
-
 app = Flask(__name__)
 
 OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/forecast"
 REQUEST_TIMEOUT_SECONDS = 10
 
-# ---- LLM review summarization (OpenRouter, OpenAI-compatible) -------------
-# Same provider/model used in backend/LLM/test_llm.py, but the key now comes
-# from an environment variable (see OPENROUTER_API_KEY) instead of api.py.
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b:free")
-MAX_REVIEWS = 60            # cap how many reviews we forward to the model
-MAX_REVIEW_CHARS = 1000     # and how long each one can be (defensive trimming)
+MAX_REVIEWS = 60
+MAX_REVIEW_CHARS = 1000
 
 REVIEW_SUMMARY_SYSTEM_PROMPT = (
     "You are an assistant specialized in analyzing hiking trail reviews."
@@ -173,7 +166,6 @@ def _closest_forecast_point(forecasts: list, target_epoch_sec: int) -> dict:
     if not valid_items:
         raise ValueError("OpenWeatherMap forecast list has no valid timestamps")
 
-    # Prefer the nearest timestamp. If equally close, prefer the future point.
     return min(
         valid_items,
         key=lambda item: (abs(item["dt"] - target_epoch_sec), item["dt"] < target_epoch_sec),
@@ -266,11 +258,9 @@ def predict() -> tuple:
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    # prediction = float(MODEL_STATE.model.predict(features)[0])
-    # prediction = round(max(prediction, 0.0), 1)
-
     prediction_log = float(MODEL_STATE.model.predict(features)[0])
-    prediction = float(np.expm1(prediction_log))   # <-- undo the log transform
+    # model trained on log1p(minutes); invert it
+    prediction = float(np.expm1(prediction_log))
     prediction = round(max(prediction, 0.0), 1)
 
     return (
@@ -281,13 +271,6 @@ def predict() -> tuple:
 
 @app.post("/summarize-reviews")
 def summarize_reviews() -> tuple:
-    """Summarize a trail's reviews with an LLM (computation offloading).
-
-    Request body:  {"reviews": ["review 1", "review 2", ...]}
-    Response body: {"summary": "...", "review_count": 12}
-
-    Only the review text corpus is read; any other fields are ignored.
-    """
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         return jsonify({"error": "Server is missing OPENROUTER_API_KEY"}), 500
@@ -300,8 +283,6 @@ def summarize_reviews() -> tuple:
     if not isinstance(raw_reviews, list):
         return jsonify({"error": "Body must contain a 'reviews' array of strings"}), 400
 
-    # Keep only non-empty strings; trim length per review and cap the count so
-    # one trail with thousands of reviews can't blow up the prompt / cost.
     reviews: list[str] = []
     for item in raw_reviews:
         if isinstance(item, str):
@@ -317,7 +298,8 @@ def summarize_reviews() -> tuple:
     user_message = f"Reviews:\n\n{reviews_block}"
 
     try:
-        from openai import OpenAI  # lazy import — see note at top of file
+        # import here so a missing package only breaks this endpoint, not app startup
+        from openai import OpenAI
 
         client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
         response = client.chat.completions.create(
@@ -333,10 +315,6 @@ def summarize_reviews() -> tuple:
         summary = (response.choices[0].message.content or "").strip()
     except Exception as exc:  # noqa: BLE001
         app.logger.exception("LLM summarization failed")
-        # TEMPORARY debugging aid: echo the exception type + short message so it
-        # shows up directly in curl / Android logcat. Remove (or gate behind a
-        # debug flag) once the endpoint is confirmed working — it must never
-        # expose anything sensitive in production.
         return (
             jsonify(
                 {

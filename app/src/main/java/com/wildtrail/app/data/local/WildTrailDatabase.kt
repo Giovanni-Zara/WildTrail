@@ -28,18 +28,6 @@ import com.wildtrail.app.data.local.entity.UserEntity
 import com.wildtrail.app.data.local.entity.UserFollowEntity
 import com.wildtrail.app.data.local.entity.WeatherEntity
 
-/**
- * The Room database for WildTrail.
- *
- *  - Owns ALL the local entities (mirroring the original schema sketch).
- *  - exportSchema = true puts a JSON snapshot in `app/schemas/` per version.
- *    This is what we'll diff against when we add migrations.
- *
- * IMPORTANT: bump [VERSION] every time you change any entity, and add a
- * Migration object in the [Migrations] file. For the assignment we ship at
- * v2 — we use destructive fallback so any schema change wipes the local
- * cache (Firestore reseeds on next launch).
- */
 @Database(
     version = WildTrailDatabase.VERSION,
     exportSchema = true,
@@ -78,8 +66,6 @@ abstract class WildTrailDatabase : RoomDatabase() {
         @Volatile
         private var instance: WildTrailDatabase? = null
 
-        /** Lazy singleton — Room itself is thread-safe but constructing it twice
-         *  would leak file handles. */
         fun getInstance(context: Context): WildTrailDatabase = instance ?: synchronized(this) {
             instance ?: build(context).also { instance = it }
         }
@@ -89,9 +75,6 @@ abstract class WildTrailDatabase : RoomDatabase() {
             WildTrailDatabase::class.java,
             DB_NAME,
         )
-            // For a uni demo we use destructive fallback so the app never crashes
-            // on a schema mismatch in dev. In production you'd write Migrations
-            // and remove this line.
             .fallbackToDestructiveMigration()
             .build()
     }

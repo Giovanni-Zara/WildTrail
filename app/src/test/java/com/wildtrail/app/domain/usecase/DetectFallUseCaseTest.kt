@@ -15,30 +15,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Unit tests for [DetectFallUseCase]'s detection logic, in isolation.
- *
- * The two sensor streams are fed as synthetic flows whose emissions are spaced
- * out with [delay] keyed off each sample's absolute timestamp, so under
- * `runTest`'s virtual clock the use case's internal `merge` sees the readings
- * in true time order — fully deterministic, no real waiting. The use case's
- * processing dispatcher is the same [StandardTestDispatcher], so its `flowOn`
- * shares that virtual clock.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetectFallUseCaseTest {
 
     private val gravity = 9.81f
 
-    /**
-     * Detection thresholds the synthetic scenarios below are written against
-     * (impact > 2.5 g, a 30° tumble, and a 3 s stillness window). Pinned
-     * explicitly rather than relying on [FallDetectionConfig]'s production
-     * defaults so this *logic* test stays deterministic when those defaults
-     * are re-tuned for real-world sensitivity — which is exactly what silently
-     * broke it before (the production impact threshold was raised to 5.5 g,
-     * above this scenario's 3 g spike, so no impact ever registered).
-     */
     private val testConfig = FallDetectionConfig(
         impactThresholdG = 2.5f,
         rotationWindowMs = 1_000L,
@@ -53,15 +34,15 @@ class DetectFallUseCaseTest {
     @Test
     fun `confirms a real fall - impact then rotation then stillness`() = runTest {
         val accel = listOf(
-            accelG(3.0f, atMs = 0),      // impact spike (> 2.5g)
-            accelG(1.0f, atMs = 100),    // at rest: gravity only (< 1.2g)
+            accelG(3.0f, atMs = 0),
+            accelG(1.0f, atMs = 100),
             accelG(1.0f, atMs = 1_000),
-            accelG(1.0f, atMs = 3_100),  // > 3s of stillness since rotation
+            accelG(1.0f, atMs = 3_100),
         )
         val gyro = listOf(
-            gyro(10f, atMs = 20),        // ~11 deg/step; crosses 30 deg...
+            gyro(10f, atMs = 20),
             gyro(10f, atMs = 40),
-            gyro(10f, atMs = 60),        // ...here, within 1s of impact
+            gyro(10f, atMs = 60),
         )
 
         val events = collectFalls(accel, gyro, StandardTestDispatcher(testScheduler))
@@ -73,12 +54,12 @@ class DetectFallUseCaseTest {
     @Test
     fun `rejects a false positive - sudden stop while running keeps moving`() = runTest {
         val accel = listOf(
-            accelG(3.0f, atMs = 0),      // hard foot-strike spike
-            accelG(1.5f, atMs = 100),    // still moving -> breaks stillness
+            accelG(3.0f, atMs = 0),
+            accelG(1.5f, atMs = 100),
             accelG(1.6f, atMs = 600),
             accelG(1.5f, atMs = 1_500),
             accelG(1.7f, atMs = 2_500),
-            accelG(1.5f, atMs = 3_200),  // never 3s of calm
+            accelG(1.5f, atMs = 3_200),
         )
         val gyro = listOf(
             gyro(10f, atMs = 20),
@@ -94,12 +75,12 @@ class DetectFallUseCaseTest {
     @Test
     fun `rejects a near miss - hard impact without an orientation change`() = runTest {
         val accel = listOf(
-            accelG(3.0f, atMs = 0),      // impact...
-            accelG(1.0f, atMs = 1_100),  // ...but rotation window already expired
+            accelG(3.0f, atMs = 0),
+            accelG(1.0f, atMs = 1_100),
             accelG(1.0f, atMs = 4_200),
         )
         val gyro = listOf(
-            gyro(0.1f, atMs = 20),       // negligible rotation (< 30 deg total)
+            gyro(0.1f, atMs = 20),
             gyro(0.1f, atMs = 40),
         )
 
@@ -107,8 +88,6 @@ class DetectFallUseCaseTest {
 
         assertTrue("an impact without a tumble must not trigger a fall", events.isEmpty())
     }
-
-    // --- helpers ---------------------------------------------------------
 
     private suspend fun collectFalls(
         accel: List<AccelReading>,
@@ -126,8 +105,6 @@ class DetectFallUseCaseTest {
         return useCase().toList()
     }
 
-    /** Accelerometer reading of [g] g-force (raw == smoothed for clean test
-     *  data), at absolute time [atMs]. */
     private fun accelG(g: Float, atMs: Long) =
         AccelReading(
             rawMagnitude = g * gravity,
@@ -135,11 +112,9 @@ class DetectFallUseCaseTest {
             timestampNs = atMs * 1_000_000L,
         )
 
-    /** Gyroscope sample of [radPerSec] angular speed (along x), at time [atMs]. */
     private fun gyro(radPerSec: Float, atMs: Long) =
         SensorSample(x = radPerSec, y = 0f, z = 0f, timestampNs = atMs * 1_000_000L)
 
-    /** Emits [samples] spaced by their absolute timestamps on the virtual clock. */
     private fun <T> timedFlow(samples: List<T>, timeNs: (T) -> Long): Flow<T> = flow {
         var clockMs = 0L
         for (sample in samples) {

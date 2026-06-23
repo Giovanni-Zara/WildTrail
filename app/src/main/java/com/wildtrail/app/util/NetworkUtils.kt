@@ -13,12 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
 object NetworkUtils {
-    /**
-     * Returns true if the device currently has an active, validated internet
-     * connection. "Validated" means Android confirmed it can actually reach
-     * the internet (not just that a Wi-Fi network is joined but captive-portal
-     * blocked).
-     */
     fun isOnline(context: Context): Boolean {
         val cm = context.getSystemService(ConnectivityManager::class.java)
         val network = cm.activeNetwork ?: return false
@@ -28,17 +22,6 @@ object NetworkUtils {
     }
 }
 
-/**
- * Composable helper that returns `true` when the device has internet and
- * recomposes automatically whenever connectivity changes.
- *
- * How it works:
- *  1. Reads the current state immediately with [NetworkUtils.isOnline].
- *  2. Registers a [ConnectivityManager.NetworkCallback] while the composable
- *     is on screen, which fires on every network change.
- *  3. [DisposableEffect] unregisters the callback when the composable leaves
- *     the screen, so we never leak a listener.
- */
 @Composable
 fun rememberIsOnline(): Boolean {
     val context = LocalContext.current

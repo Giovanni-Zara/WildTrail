@@ -23,19 +23,6 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.util.HikeMath
 
-/**
- * Elevation profile of a hike rendered with **MPAndroidChart**, hosted
- * inside a Compose `AndroidView`.
- *
- *  - The X-axis is **cumulative distance in km** (more intuitive than
- *    sample index — two samples 30 s apart cover different distances).
- *  - The Y-axis is altitude in metres, taken straight from the GPS sample.
- *    Samples without an altitude reading are skipped (a phone may briefly
- *    lose the satellite-altitude fix in narrow canyons).
- *
- * If there are fewer than two altitude-bearing points we render a
- * "no elevation data" placeholder so the layout doesn't collapse.
- */
 @Composable
 fun ElevationChart(points: List<GeoPoint>) {
     val series = remember(points) { buildElevationSeries(points) }
@@ -99,11 +86,6 @@ fun ElevationChart(points: List<GeoPoint>) {
     }
 }
 
-/**
- * Build (cumulative-distance-km, altitude-m) pairs, skipping samples
- * without altitude data so the line doesn't fall to 0 when GPS loses
- * altitude.
- */
 private fun buildElevationSeries(points: List<GeoPoint>): List<Pair<Float, Float>> {
     if (points.size < 2) return emptyList()
     val out = ArrayList<Pair<Float, Float>>(points.size)

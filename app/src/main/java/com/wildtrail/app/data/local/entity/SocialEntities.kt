@@ -7,9 +7,6 @@ import com.wildtrail.app.domain.model.FollowedTrail
 import com.wildtrail.app.domain.model.HikeComment
 import com.wildtrail.app.domain.model.UserFollow
 
-// --- User-follows-User ---------------------------------------------------
-
-/** UNIQUE on (followerUid, followeeUid). No FK — cross-device. */
 @Entity(
     tableName = "user_follows",
     primaryKeys = ["followerUid", "followeeUid"],
@@ -36,8 +33,6 @@ fun UserFollow.toEntity(): UserFollowEntity = UserFollowEntity(
     createdAt = createdAt,
 )
 
-// --- User-follows-Trail --------------------------------------------------
-
 @Entity(
     tableName = "followed_trails",
     primaryKeys = ["userUid", "hikeId"],
@@ -63,8 +58,6 @@ fun FollowedTrail.toEntity(): FollowedTrailEntity = FollowedTrailEntity(
     notifyOnNewReview = notifyOnNewReview,
     createdAt = createdAt,
 )
-
-// --- Hike comments -------------------------------------------------------
 
 @Entity(
     tableName = "hike_comments",

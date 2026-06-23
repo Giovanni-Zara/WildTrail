@@ -6,7 +6,6 @@ import org.junit.Test
 
 class LevelMathTest {
 
-    /** EXPECTED: the threshold for level 1 is 0 XP, level 2 is 100, etc. */
     @Test
     fun `xpForLevel matches the documented curve`() {
         assertEquals(0, LevelMath.xpForLevel(1))
@@ -17,7 +16,6 @@ class LevelMathTest {
         assertEquals(4500, LevelMath.xpForLevel(10))
     }
 
-    /** EXPECTED: levelForXp is the inverse of xpForLevel at the boundaries. */
     @Test
     fun `levelForXp inverts the curve at boundaries`() {
         assertEquals(1, LevelMath.levelForXp(0))
@@ -29,17 +27,13 @@ class LevelMathTest {
         assertEquals(6, LevelMath.levelForXp(1500))
     }
 
-    /** EXPECTED: progress is 0.0 right at a level boundary, ~0.5 mid-level. */
     @Test
     fun `progressInCurrentLevel is 0 at boundary and 1 just before next`() {
         assertEquals(0f, LevelMath.progressInCurrentLevel(100), 0.001f)
-        // Level 2 spans 100 → 300 (200 XP wide). 200 XP total = halfway.
         assertEquals(0.5f, LevelMath.progressInCurrentLevel(200), 0.001f)
-        // 299 XP is just below the level-3 threshold.
         assertTrue(LevelMath.progressInCurrentLevel(299) > 0.99f)
     }
 
-    /** EXPECTED: never returns a level below 1, even with absurd inputs. */
     @Test
     fun `levelForXp clamps to at least 1`() {
         assertEquals(1, LevelMath.levelForXp(-100))

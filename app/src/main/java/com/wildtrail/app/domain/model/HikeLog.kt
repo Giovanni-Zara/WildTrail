@@ -2,25 +2,6 @@ package com.wildtrail.app.domain.model
 
 import kotlinx.serialization.Serializable
 
-/**
- * The "trekking session" model — a single recorded hike, public or private.
- *
- * The route itself is stored as a list of [GeoPoint]s; we keep them as a
- * @Serializable class so the same shape can be persisted as JSON in Room
- * (one TEXT column) and as an array of maps in Firestore.
- *
- * The "characteristics" fields ([difficultyLevel], [mudRisk], [pathClarity],
- * [fatigueLevel], [animalEncounterRisk], [waterAvailability]) are filled in
- * by the **creator** at save time. Other users then leave reviews
- * (see [TrailReview]) whose `overallRating` values are averaged into the
- * hike's [averageRating] / [reviewCount].
- *
- * [creatorUsername] / [creatorProfilePictureUrl] are a denormalised snapshot
- * of the creator at save time. We store them on the hike itself so the
- * Home/Explore feed can show "posted by ___" *without* needing the
- * creator's full user document on the local device — which solves the
- * cross-device social-feed case where device B has never met user A.
- */
 data class HikeLog(
     val hikeId: String,
     val creatorFirebaseUid: String,
@@ -51,21 +32,12 @@ data class HikeLog(
     val waterAvailability: Boolean,
     val averageRating: Float,
     val reviewCount: Int,
-    /** Photos / audio notes captured during the hike, each pinned to the
-     *  GPS position where they were taken. Stored device-locally — files live
-     *  in app-private internal storage so we don't need extra permissions. */
     val mediaItems: List<HikeMediaItem> = emptyList(),
 )
 
 @Serializable
 enum class HikeMediaType { PHOTO, AUDIO }
 
-/**
- * A photo or voice note captured during a hike, pinned to the user's GPS
- * position at the moment of capture. [filePath] is an absolute path to a
- * file in app-private internal storage (always readable by the app,
- * survives process death, no extra permissions needed).
- */
 @Serializable
 data class HikeMediaItem(
     val id: String,
@@ -80,16 +52,10 @@ enum class SurfaceType {
     MOUNTAIN, FOREST, COASTAL, URBAN, DESERT, OTHER
 }
 
-/**
- * A single GPS sample from the route. We *intentionally* keep this small —
- * a long hike can produce thousands of points and we don't want to bloat
- * Firestore documents (which are capped at 1 MiB).
- */
 @Serializable
 data class GeoPoint(
     val lat: Double,
     val lng: Double,
     val altitudeM: Double? = null,
-    /** Epoch millis — handy for replaying a hike at correct cadence. */
     val timestamp: Long = 0L,
 )

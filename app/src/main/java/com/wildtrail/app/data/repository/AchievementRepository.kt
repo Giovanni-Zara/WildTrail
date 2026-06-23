@@ -20,12 +20,6 @@ class AchievementRepository(
     private val firestore: FirestoreService,
 ) {
 
-    /**
-     * Make the catalogue available. The built-in [AchievementCatalog] is
-     * seeded *unconditionally* so the Achievements screen always has content
-     * even with no Firestore; the remote catalogue is then layered on top
-     * (best-effort) so the cloud can add/override entries later.
-     */
     suspend fun syncDefinitions() {
         runCatching {
             achievementDao.upsertDefinitions(AchievementCatalog.ALL.map { it.toEntity() })
@@ -36,12 +30,6 @@ class AchievementRepository(
         }.onFailure { Log.w(TAG, "Achievement catalogue sync skipped", it) }
     }
 
-    /**
-     * Award every catalogue achievement whose criteria the user now meets
-     * and that they haven't already earned. Idempotent: the `hasEarned`
-     * guard means re-running this (e.g. every time a screen opens) never
-     * re-awards or re-writes anything.
-     */
     suspend fun evaluateAndAward(user: User, hikes: List<HikeLog>) {
         AchievementCatalog.ALL.forEach { def ->
             val metric = AchievementEngine.metricFor(def.category, user, hikes)

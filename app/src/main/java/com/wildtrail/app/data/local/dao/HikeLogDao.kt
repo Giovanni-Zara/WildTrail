@@ -22,20 +22,12 @@ interface HikeLogDao {
     @Query("SELECT * FROM hike_logs WHERE hikeId = :id LIMIT 1")
     fun observeById(id: String): Flow<HikeLogEntity?>
 
-    /** A user's own hikes, newest first. */
     @Query("SELECT * FROM hike_logs WHERE creatorFirebaseUid = :uid ORDER BY endedAt DESC")
     fun observeByCreator(uid: String): Flow<List<HikeLogEntity>>
 
-    /** One-shot variant used by the backfill path that patches the
-     *  denormalised creator info on legacy hikes. */
     @Query("SELECT * FROM hike_logs WHERE creatorFirebaseUid = :uid")
     suspend fun getByCreator(uid: String): List<HikeLogEntity>
 
-    /**
-     * Hikes the user has liked, most-recently-liked first. We don't need a
-     * new table — the existing normalised `likes` join table already records
-     * every (user, hike) like, so we just INNER JOIN it onto `hike_logs`.
-     */
     @Query(
         """
         SELECT h.* FROM hike_logs h
@@ -46,7 +38,6 @@ interface HikeLogDao {
     )
     fun observeLikedHikes(uid: String): Flow<List<HikeLogEntity>>
 
-    /** "Explore" feed: only public hikes, most recent first. */
     @Query("SELECT * FROM hike_logs WHERE isPrivate = 0 ORDER BY endedAt DESC LIMIT :limit")
     fun observePublicFeed(limit: Int = 50): Flow<List<HikeLogEntity>>
 
@@ -61,17 +52,6 @@ interface HikeLogDao {
     )
     suspend fun search(q: String): List<HikeLogEntity>
 
-    /**
-     * Explore "Search & Filter" query: public hikes matching an optional text
-     * query AND the distance / elevation ranges AND (when any are selected) the
-     * chosen difficulty levels AND the chosen surface types. [anyDifficulty] /
-     * [anySurface] short-circuit their respective clauses so the caller can
-     * mean "any" without an empty `IN ()`.
-     *
-     * Returns a [Flow] so the results stay live: editing a hike's denormalised
-     * fields (e.g. `likesCount` after a like) re-emits the filtered list with
-     * the fresh value instead of leaving a stale snapshot on screen.
-     */
     @Query(
         """
         SELECT * FROM hike_logs

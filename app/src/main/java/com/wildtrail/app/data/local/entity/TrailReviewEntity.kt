@@ -5,15 +5,6 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.TrailReview
 
-/**
- * A review of a hike. The compound UNIQUE index on (reviewerUid, hikeId)
- * enforces "one review per user per hike", matching the original schema
- * sketch.
- *
- * No FK constraints on the local table — see [HikeLogEntity] for rationale
- * (we cache other users' content even when we don't have those users in
- * our local `users` row).
- */
 @Entity(
     tableName = "trail_reviews",
     indices = [

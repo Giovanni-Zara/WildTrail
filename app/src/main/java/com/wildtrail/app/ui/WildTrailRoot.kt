@@ -23,19 +23,6 @@ import com.wildtrail.app.ui.navigation.Destination
 import com.wildtrail.app.ui.navigation.WildTrailNavGraph
 import com.wildtrail.app.ui.navigation.bottomNavItems
 
-/**
- * Root composable for the entire app.
- *
- *  - Owns the [androidx.navigation.NavHostController].
- *  - Watches the auth state and **only when it transitions** (signed-in ↔
- *    signed-out) does it swap the active sub-graph. We track the last
- *    *kind* of auth state we navigated for in a [rememberSaveable] flag, so
- *    a configuration change (rotation) doesn't fire a no-op navigation
- *    that would otherwise reset the back stack.
- *
- *  - Hosts the Material 3 [Scaffold] — the standard "slot" for top bar,
- *    bottom bar, and floating action button.
- */
 @Composable
 fun WildTrailRoot(
     appContainer: AppContainer,
@@ -48,8 +35,6 @@ fun WildTrailRoot(
         else -> Destination.AuthGraph.route
     }
 
-    // Persist the *kind* of auth state we've already responded to across
-    // configuration changes. Rotation -> same flag -> no re-navigation.
     var lastHandledSignedIn by rememberSaveable {
         mutableStateOf<Boolean?>(null)
     }
@@ -58,7 +43,6 @@ fun WildTrailRoot(
         val signedInNow = authState is AuthState.SignedIn
         val isLoading = authState is AuthState.Loading
         if (isLoading) return@LaunchedEffect
-        // Only react to actual transitions.
         if (lastHandledSignedIn == signedInNow) return@LaunchedEffect
         lastHandledSignedIn = signedInNow
         if (signedInNow) {

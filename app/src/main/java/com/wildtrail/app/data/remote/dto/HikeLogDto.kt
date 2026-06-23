@@ -4,13 +4,6 @@ import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
 
-/**
- * Firestore document shape for the `hikes` collection.
- *
- * The route is a List<Map<String, Any>> because Firestore can't directly
- * serialise our [GeoPoint] data class. Storing them as plain maps keeps the
- * data fully queryable in the Firebase console.
- */
 data class HikeLogDto(
     var hikeId: String = "",
     var creatorFirebaseUid: String = "",

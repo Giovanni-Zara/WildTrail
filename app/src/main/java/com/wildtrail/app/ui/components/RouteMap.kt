@@ -27,18 +27,6 @@ import com.wildtrail.app.domain.model.GeoPoint
 import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.HikeMediaType
 
-/**
- * Reusable Google Map that draws a hike route as a [Polyline].
- *
- *  - When [follow] is `true` (live tracking) the camera follows the most
- *    recent point. The polyline grows in real-time as new samples arrive.
- *  - When [follow] is `false` (post-hike viewer) the camera frames the
- *    full bounding box of the route exactly once.
- *  - [currentLocation] lets the map render *before* a route exists (e.g. the
- *    tracking screen before "Start hike"): we center on the user and drop a
- *    marker instead of showing a "waiting for GPS" box. The placeholder is
- *    only used when we have neither a route nor a current fix.
- */
 @Composable
 fun RouteMap(
     points: List<GeoPoint>,
@@ -49,8 +37,6 @@ fun RouteMap(
     mediaItems: List<HikeMediaItem> = emptyList(),
 ) {
     if (points.isEmpty() && currentLocation == null) {
-        // No route and no fix yet. We still take up the requested size so
-        // the parent layout doesn't snap.
         androidx.compose.foundation.layout.Box(
             modifier = modifier,
             contentAlignment = androidx.compose.ui.Alignment.Center,
@@ -72,14 +58,12 @@ fun RouteMap(
     }
 
     if (latLngs.isEmpty()) {
-        // Pre-route: just keep the camera on the user's latest fix.
         LaunchedEffect(currentLatLng) {
             currentLatLng?.let {
                 cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it, 16f))
             }
         }
     } else if (follow) {
-        // Live-track: re-center on the most-recent point each emission.
         LaunchedEffect(latLngs.lastOrNull()) {
             latLngs.lastOrNull()?.let { newest ->
                 cameraPositionState.animate(
@@ -88,8 +72,6 @@ fun RouteMap(
             }
         }
     } else {
-        // Post-hike: fit the whole route exactly once when the list grows
-        // from empty → non-empty.
         LaunchedEffect(latLngs.size) {
             if (latLngs.size >= 2) {
                 val bounds = LatLngBounds.Builder().apply {
@@ -115,7 +97,7 @@ fun RouteMap(
         if (latLngs.isNotEmpty()) {
             Polyline(
                 points = latLngs,
-                color = androidx.compose.ui.graphics.Color(0xFF2E5D3A), // brand forest green
+                color = androidx.compose.ui.graphics.Color(0xFF2E5D3A),
                 width = 10f,
             )
         }
@@ -124,10 +106,6 @@ fun RouteMap(
                 Marker(state = MarkerState(position = current), title = "You")
             }
         }
-        // Photo / audio note pins, colour-coded so it's obvious at a glance
-        // which captured items are where on the route. We number them in
-        // chronological order — per type — so the user can tell "Photo 1"
-        // from "Photo 2" when several were taken on the same hike.
         val orderedMedia = remember(mediaItems) { mediaItems.sortedBy { it.timestamp } }
         var photoCount = 0
         var audioCount = 0

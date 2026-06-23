@@ -50,8 +50,6 @@ class ProfileViewModel(
     init {
         viewModelScope.launch {
             runCatching { achievementRepository.syncDefinitions() }
-            // Reconcile the signed-in user's achievements whenever their
-            // profile (their own) is on screen, so the count stays correct.
             currentUidFlow
                 .flatMapLatest { uid ->
                     if (uid == null) {
@@ -122,8 +120,6 @@ class ProfileViewModel(
         }
     }
 
-    /** Picked URI from the system Photo Picker. Upload happens in the
-     *  background; the row reflects [ProfileUiState.uploadingPicture]. */
     fun changeProfilePicture(localUri: android.net.Uri) {
         val uid = uiState.value.user?.firebaseUid ?: return
         uploadingPicture.value = true

@@ -8,16 +8,6 @@ import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.HikeMediaItem
 import com.wildtrail.app.domain.model.SurfaceType
 
-/**
- * A recorded hike. We keep the route as a JSON-encoded list of [GeoPoint]
- * (decoded by [com.wildtrail.app.data.local.converter.Converters]).
- *
- * **No foreign-key constraint to UserEntity**: the local DB caches public
- * hikes from *other* users too, and those users may not have a row in our
- * `users` table on this device. The creator's display info is denormalised
- * onto the hike itself (creatorUsername, creatorProfilePictureUrl), so we
- * can still render the feed.
- */
 @Entity(
     tableName = "hike_logs",
     indices = [Index("creatorFirebaseUid"), Index("isPrivate")],

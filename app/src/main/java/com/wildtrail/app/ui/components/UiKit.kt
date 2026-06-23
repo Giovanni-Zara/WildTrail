@@ -26,17 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/**
- * Shared, reusable building blocks for the modernised WildTrail UI. Keeping
- * them here means every screen composes the same vocabulary — gradient accents,
- * section headers, glassy stat tiles — for a consistent, dynamic look.
- */
-
-/**
- * A section title with a small vertical gradient accent bar and an optional
- * trailing slot (e.g. a "See all" text button). Replaces bare `Text(…,
- * titleLarge)` section headers across the app.
- */
 @Composable
 fun SectionHeader(
     title: String,
@@ -72,11 +61,6 @@ fun SectionHeader(
     }
 }
 
-/**
- * A translucent "glass" stat tile designed to sit over a gradient hero
- * ([AuroraHeader]). White text on a frosted panel keeps it legible on any
- * brand colour beneath.
- */
 @Composable
 fun HeroStat(
     value: String,
@@ -113,12 +97,6 @@ fun HeroStat(
     }
 }
 
-/**
- * A subtle full-screen backdrop: a brand-tinted wash that fades from a faint
- * primary-container tint at the top into the base background. Wrap a screen's
- * content in this (with the `Scaffold` container set transparent) to add depth
- * without overpowering the content.
- */
 @Composable
 fun GradientBackdrop(
     modifier: Modifier = Modifier,
@@ -136,10 +114,6 @@ fun GradientBackdrop(
     )
 }
 
-/**
- * A simple gradient divider used to separate stacked content with a touch more
- * polish than a flat line.
- */
 @Composable
 fun GradientDivider(modifier: Modifier = Modifier) {
     Box(

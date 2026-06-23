@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TrailReviewDao {
 
-    /** REPLACE on (reviewerUid, hikeId) gives us the upsert behaviour we want
-     *  — re-submitting overwrites the previous review for that hike. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(review: TrailReviewEntity)
 

@@ -41,7 +41,6 @@ class EmergencyContactRepository(
             .onFailure { Log.w(TAG, "Firestore contact delete skipped", it) }
     }
 
-    /** Used by the fall-detection feature. */
     suspend fun getFallNotifyList(uid: String): List<EmergencyContact> =
         dao.getFallNotifyList(uid).map { it.toDomain() }
 

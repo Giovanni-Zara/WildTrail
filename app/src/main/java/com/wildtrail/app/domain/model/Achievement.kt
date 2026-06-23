@@ -1,9 +1,5 @@
 package com.wildtrail.app.domain.model
 
-/**
- * The static catalogue of achievements (e.g. "Mountain Goat — 1000m elevation in
- * a single hike"). Hard-coded by the developers and synced down from Firestore.
- */
 data class AchievementDefinition(
     val achievementId: String,
     val name: String,
@@ -18,7 +14,6 @@ enum class AchievementCategory {
     DISTANCE, ELEVATION, SOCIAL, BIODIVERSITY, STREAK, OTHER
 }
 
-/** A user has unlocked an achievement. UNIQUE on (userUid, achievementId). */
 data class UserAchievement(
     val userUid: String,
     val achievementId: String,

@@ -1,21 +1,8 @@
 package com.wildtrail.app.domain.model
 
-/**
- * The built-in catalogue of achievements WildTrail ships with.
- *
- * `AchievementRepository.syncDefinitions()` seeds this into Room
- * unconditionally on first launch, so the Achievements screen always has
- * content even if Firestore is unavailable. Firestore can later add or
- * override entries — the seed is purely a fallback.
- *
- * The [AchievementDefinition.thresholdValue] is interpreted by
- * [com.wildtrail.app.util.AchievementEngine] against the user's current
- * stats; see that file for the exact metric formula per category.
- */
 object AchievementCatalog {
 
     val ALL: List<AchievementDefinition> = listOf(
-        // ---- DISTANCE (totalDistanceKm) ----
         AchievementDefinition(
             achievementId = "distance_first_km",
             name = "First Steps",
@@ -53,7 +40,6 @@ object AchievementCatalog {
             thresholdValue = 200f,
         ),
 
-        // ---- ELEVATION (max elevation gain in a SINGLE hike) ----
         AchievementDefinition(
             achievementId = "elevation_500m",
             name = "Hill Climber",
@@ -82,7 +68,6 @@ object AchievementCatalog {
             thresholdValue = 2000f,
         ),
 
-        // ---- SOCIAL (number of hikes shared publicly) ----
         AchievementDefinition(
             achievementId = "social_first_public",
             name = "Going Public",
@@ -102,7 +87,6 @@ object AchievementCatalog {
             thresholdValue = 10f,
         ),
 
-        // ---- STREAK (totalHikesCount) ----
         AchievementDefinition(
             achievementId = "streak_5_hikes",
             name = "Getting Hooked",

@@ -20,16 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/** "Given star" gold, used by both read-only and editable rows. */
 private val StarGold: Color = Color(0xFFF5B301)
 
-/** "Ungiven star" grey — neutral but visible on light + dark surfaces. */
 private val StarGrey: Color = Color(0xFFB9B9B9)
 
-/**
- * A label + 1..5 chip row used everywhere we collect a non-star rating
- * (mud, fatigue, etc.).
- */
 @Composable
 fun RatingRow(
     label: String,
@@ -56,18 +50,6 @@ fun RatingRow(
     }
 }
 
-/**
- * Read-only star rating row.
- *
- * All five stars are always rendered as **filled** [Icons.Filled.Star]
- * shapes — the difference between "given" and "not given" is purely
- * colour: gold for given, grey for not given. This matches how 5-star
- * ratings work in mainstream apps (Maps, Play Store, Airbnb) and reads
- * better than mixing filled + outlined silhouettes.
- *
- * The number of gold stars is the rating *rounded to the nearest
- * integer* so it always matches the "N / 5" text shown next to it.
- */
 @Composable
 fun StarRow(
     rating: Float,
@@ -87,10 +69,6 @@ fun StarRow(
     }
 }
 
-/**
- * Editable star row — used in the review form. Same colour convention as
- * [StarRow].
- */
 @Composable
 fun EditableStarRow(
     rating: Int,

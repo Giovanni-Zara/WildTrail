@@ -10,74 +10,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlin.math.abs
 
-/**
- * Emitted by [DetectFallUseCase] **only when a fall is confirmed** — there are
- * deliberately no intermediate ("impact", "rotation") states on this stream;
- * the use case swallows those internally and surfaces a single actionable
- * event.
- */
 sealed interface FallDetectionEvent {
-    /** A complete fall signature was observed; [timestampNs] is the sensor
-     *  time of the reading that confirmed it. */
     data class FallDetected(val timestampNs: Long) : FallDetectionEvent
 }
 
-/**
- * Tunable thresholds for the fall-detection state machine. Defaults are a
- * pragmatic balance between catching real falls and rejecting everyday motion;
- * exposed as a data class so they can be tightened/loosened (e.g. from a
- * settings screen, or in tests) without touching the algorithm.
- *
- * Note the impact is checked against the **raw** accelerometer magnitude while
- * stillness is checked against the **smoothed** one — see [com.wildtrail.app.domain.model.AccelReading].
- */
 data class FallDetectionConfig(
-    /** Impact spike (raw, in g) that opens the detection window. */
     val impactThresholdG: Float = 5.5f,
-    /** Max time after impact in which the rotation must occur (ms). */
     val rotationWindowMs: Long = 1_000L,
-    /** Cumulative orientation change that confirms a tumble (degrees). */
     val rotationThresholdDeg: Float = 15f,
-    /** Required duration of post-fall stillness (ms). */
     val inactivityWindowMs: Long = 1_000L,
-    /** Smoothed accel magnitude (g) below which the body is "at rest"
-     *  (≈1g of gravity only, with a little slack for settling). */
     val inactivityAccelMaxG: Float = 1.3f,
-    /** Angular speed (rad/s) below which the gyroscope is considered "calm". */
     val inactivityGyroMaxRadPerSec: Float = 0.6f,
-    /** Give up waiting for stillness this long after the tumble is confirmed,
-     *  so sustained motion (e.g. running) can never eventually confirm and we
-     *  return to watching for fresh impacts. */
     val maxStillnessWaitMs: Long = 6_000L,
-    /** Standard gravity, used to convert m/s² magnitudes to g. */
     val gravity: Float = 9.81f,
 )
 
-/**
- * Detects a fall from the device motion sensors.
- *
- * It consumes the accelerometer stream (raw + smoothed magnitude per sample)
- * and the raw gyroscope stream from [SensorRepository], merges them into one
- * time-ordered timeline, and runs a small state machine looking for the
- * classic fall signature:
- *
- *  1. **Impact** — raw accelerometer magnitude spikes above [FallDetectionConfig.impactThresholdG].
- *  2. **Tumble** — within [FallDetectionConfig.rotationWindowMs], the gyroscope
- *     integrates more than [FallDetectionConfig.rotationThresholdDeg] of rotation.
- *  3. **Stillness** — the body then stays below the rest thresholds for
- *     [FallDetectionConfig.inactivityWindowMs].
- *
- * Any step that fails (no rotation after an impact, or movement resuming
- * before the stillness window completes) resets the machine — which is exactly
- * what rejects the false-positive cases (a runner's sudden stop keeps moving;
- * a bump without a tumble never rotates).
- *
- * All processing runs on [dispatcher] (production: [Dispatchers.Default]).
- * The dispatcher is injectable so tests can drive it on a virtual-time test
- * scheduler with `runTest`. [debugLog], when supplied, receives human-readable
- * diagnostics (impacts, rotation totals, resets, periodic peak g) — wired to
- * Logcat in debug builds.
- */
 class DetectFallUseCase(
     private val sensorRepository: SensorRepository,
     private val config: FallDetectionConfig = FallDetectionConfig(),
@@ -102,18 +49,12 @@ class DetectFallUseCase(
             .flowOn(dispatcher)
     }
 
-    /** Unified item on the merged sensor timeline. */
     private sealed interface Reading {
         val tNs: Long
         data class Accel(val rawG: Float, val smoothedG: Float, override val tNs: Long) : Reading
         data class Gyro(val angularSpeed: Float, override val tNs: Long) : Reading
     }
 
-    /**
-     * Stateful detector folded over the merged stream. A fresh instance is
-     * created per collection (inside the [flow] builder) so re-collecting the
-     * use case never inherits stale state.
-     */
     private fun Flow<Reading>.detectFalls(): Flow<FallDetectionEvent> =
         flow {
             val machine = FallStateMachine(config, debugLog)
@@ -127,6 +68,7 @@ class DetectFallUseCase(
         private val debugLog: ((String) -> Unit)?,
     ) {
 
+        // a real fall = hard impact, then rotation, then stillness — requiring all three cuts false positives
         private enum class Phase { MONITORING, AWAIT_ROTATION, AWAIT_INACTIVITY }
 
         private val rotationWindowNs = config.rotationWindowMs * NANOS_PER_MILLI
@@ -137,16 +79,12 @@ class DetectFallUseCase(
         private var impactTNs = 0L
         private var rotationAccumDeg = 0f
         private var lastGyroTNs = 0L
-        /** Restartable timer: start of the current uninterrupted calm period. */
         private var inactivitySinceTNs = 0L
-        /** Fixed anchor: when we entered AWAIT_INACTIVITY (for the give-up bound). */
         private var awaitInactivityStartTNs = 0L
 
-        // Diagnostics: rolling peak raw-g, logged ~once a second.
         private var peakG = 0f
         private var peakWindowStartNs = 0L
 
-        /** @return a confirmed event, or null while still gathering evidence. */
         fun process(reading: Reading): FallDetectionEvent? {
             trackPeak(reading)
             when (phase) {
@@ -161,8 +99,6 @@ class DetectFallUseCase(
                 }
 
                 Phase.AWAIT_ROTATION -> {
-                    // Rotation didn't arrive in time → not a tumble. Reset and
-                    // let this very reading seed a new impact (re-entrant once).
                     if (reading.tNs - impactTNs > rotationWindowNs) {
                         log { "no rotation within ${config.rotationWindowMs}ms (got %.0f°) → reset".format(rotationAccumDeg) }
                         reset()
@@ -187,19 +123,13 @@ class DetectFallUseCase(
                     val movedByGyro = reading is Reading.Gyro &&
                         abs(reading.angularSpeed) > config.inactivityGyroMaxRadPerSec
                     if (movedByAccel || movedByGyro) {
-                        // Still moving — could be the tail of the tumble settling,
-                        // or genuine ongoing activity. Restart the stillness timer
-                        // instead of discarding the impact+rotation evidence...
                         inactivitySinceTNs = reading.tNs
-                        // ...but give up if stillness is never reached within the
-                        // bound, so sustained motion (running) can't keep us here.
                         if (reading.tNs - awaitInactivityStartTNs > maxStillnessWaitNs) {
                             log { "no stillness within ${config.maxStillnessWaitMs}ms → reset" }
                             reset()
                         }
                         return null
                     }
-                    // Stayed still long enough → confirmed fall.
                     if (reading.tNs - inactivitySinceTNs >= inactivityWindowNs) {
                         log { "FALL CONFIRMED" }
                         val event = FallDetectionEvent.FallDetected(reading.tNs)

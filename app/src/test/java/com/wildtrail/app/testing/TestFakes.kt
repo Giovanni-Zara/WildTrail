@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.map
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
-/** Convenience factory for building a [User] in tests. */
 fun testUser(
     uid: String = "uid-1",
     name: String = "tester",
@@ -41,10 +40,6 @@ fun testUser(
     isPublic = true,
 )
 
-/**
- * In-memory [UserDao]. UserDao is an interface, so we just implement it
- * directly with a [MutableStateFlow]-backed map.
- */
 class FakeUserDao : UserDao {
     private val state = MutableStateFlow<Map<String, UserEntity>>(emptyMap())
 
@@ -78,41 +73,24 @@ class FakeUserDao : UserDao {
     }
 }
 
-/**
- * Pre-stubbed [FirebaseAuthService] mock. We must stub [authStateFlow] before
- * the parent [AuthRepository] constructor runs — otherwise the stateIn block
- * will NPE on a default-mock null return. mockito-kotlin's `mock { ... }`
- * DSL stubs at mock-creation time, which is exactly what we need.
- *
- * (Mockito 5+ uses the inline mock-maker by default, so it handles `open`
- * classes with non-trivial constructors fine.)
- */
 fun stubAuthService(): FirebaseAuthService = mock {
     on { authStateFlow() } doReturn flowOf(null)
 }
 
-/** Stub [FirestoreService] — null db means it never hits Firebase. */
 fun stubFirestoreService(): FirestoreService = FirestoreService(db = null)
 
-/** Stub [com.wildtrail.app.data.remote.StorageService] — never actually uploads. */
 fun stubStorageService(): com.wildtrail.app.data.remote.StorageService =
     object : com.wildtrail.app.data.remote.StorageService() {
         override suspend fun uploadProfilePicture(uid: String, localUri: android.net.Uri): String =
             "https://example.test/$uid.jpg"
     }
 
-/** Stub [com.wildtrail.app.util.LocalImageStore] — no filesystem / Context. */
 fun stubLocalImageStore(): com.wildtrail.app.util.LocalImageStore =
     object : com.wildtrail.app.util.LocalImageStore(mock()) {
         override suspend fun saveProfilePicture(uid: String, srcUri: android.net.Uri) =
             java.io.File("/tmp/$uid.jpg")
     }
 
-/**
- * Fake [AuthRepository] used by view-model tests. Extends the production
- * class, pre-stubs the heavy collaborators, and overrides only what the
- * tests touch.
- */
 class FakeAuthRepository : AuthRepository(
     authService = stubAuthService(),
     firestore = stubFirestoreService(),

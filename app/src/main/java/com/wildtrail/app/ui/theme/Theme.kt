@@ -67,12 +67,6 @@ private val DarkColors = darkColorScheme(
     onErrorContainer = OnErrorContainerDark,
 )
 
-/**
- * Top-level theme wrapper. We default to the WildTrail brand palette so
- * branded controls (Start hike, etc.) keep a consistent emerald look on every
- * device. Material You / dynamic colour can be re-enabled by passing
- * `dynamicColor = true`.
- */
 @Composable
 fun WildTrailTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

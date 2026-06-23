@@ -11,15 +11,6 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.wildtrail.app.ui.navigation.bottomNavItems
 
-/**
- * Stateless bottom navigation bar wired to the [NavController].
- *
- * Behaviour:
- *  - Highlights the destination matching the current back-stack entry.
- *  - Pops up to the start destination + saves state on tab switch — the
- *    standard "tab navigation" pattern recommended by the Compose docs:
- *    https://developer.android.com/jetpack/compose/navigation#bottom-nav
- */
 @Composable
 fun WildTrailBottomBar(navController: NavController) {
     NavigationBar {
@@ -32,8 +23,6 @@ fun WildTrailBottomBar(navController: NavController) {
                 onClick = {
                     if (currentRoute != item.destination.route) {
                         navController.navigate(item.destination.route) {
-                            // Pop back to the start destination so we don't
-                            // build up a long back-stack as users tap tabs.
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
                             }

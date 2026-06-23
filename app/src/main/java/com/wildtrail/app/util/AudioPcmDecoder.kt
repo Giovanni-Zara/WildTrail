@@ -8,29 +8,10 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * Decodes a compressed audio file (the app records AAC-in-MP4 `.m4a` at
- * 44.1 kHz mono — see [AudioRecorder]) into a single-channel float PCM signal
- * resampled to a target sample rate.
- *
- * BirdNET expects **mono, 48 kHz, float in [-1, 1]**, so [decodeToMonoFloat]
- * is the bridge between what the phone records and what the model consumes.
- *
- * The decode uses [MediaExtractor] + [MediaCodec] in synchronous mode and
- * accumulates raw 16-bit PCM into a byte stream (kept primitive to avoid
- * boxing millions of samples), then down-mixes to mono and linearly resamples.
- */
 object AudioPcmDecoder {
 
     private const val DEQUEUE_TIMEOUT_US = 10_000L
 
-    /**
-     * Fully decode [file] and return mono float samples at [targetSampleRate].
-     * Returns an empty array if the file has no decodable audio track.
-     *
-     * @throws Exception if the file can't be opened/decoded — callers should
-     *   wrap in runCatching.
-     */
     fun decodeToMonoFloat(file: File, targetSampleRate: Int): FloatArray {
         val extractor = MediaExtractor()
         extractor.setDataSource(file.absolutePath)
@@ -46,8 +27,6 @@ object AudioPcmDecoder {
             val mime = inputFormat.getString(MediaFormat.KEY_MIME)
                 ?: return FloatArray(0)
 
-            // Best guess from the input format; refined from the decoder's
-            // output format once it reports INFO_OUTPUT_FORMAT_CHANGED.
             var channelCount = inputFormat.optInt(MediaFormat.KEY_CHANNEL_COUNT, 1)
             var sourceSampleRate = inputFormat.optInt(MediaFormat.KEY_SAMPLE_RATE, targetSampleRate)
 
@@ -92,7 +71,7 @@ object AudioPcmDecoder {
                             channelCount = outFormat.optInt(MediaFormat.KEY_CHANNEL_COUNT, channelCount)
                             sourceSampleRate = outFormat.optInt(MediaFormat.KEY_SAMPLE_RATE, sourceSampleRate)
                         }
-                        MediaCodec.INFO_TRY_AGAIN_LATER -> { /* keep pumping input */ }
+                        MediaCodec.INFO_TRY_AGAIN_LATER -> {  }
                         else -> if (outIndex >= 0) {
                             if (info.size > 0) {
                                 val outBuf = codec.getOutputBuffer(outIndex)
@@ -123,7 +102,7 @@ object AudioPcmDecoder {
         }
     }
 
-    /** Convert interleaved little-endian 16-bit PCM into mono float [-1, 1]. */
+    // decoder output is interleaved 16-bit PCM; average the channels down to mono
     private fun toMonoFloat(bytes: ByteArray, channels: Int): FloatArray {
         if (bytes.isEmpty()) return FloatArray(0)
         val shorts = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
@@ -141,11 +120,6 @@ object AudioPcmDecoder {
         return mono
     }
 
-    /**
-     * Linear-interpolation resampler. Good enough for speech/birdsong feature
-     * extraction; a polyphase filter would be higher fidelity but is overkill
-     * for a 44.1 kHz → 48 kHz nudge.
-     */
     private fun resampleLinear(input: FloatArray, srcRate: Int, dstRate: Int): FloatArray {
         if (input.isEmpty() || srcRate <= 0 || srcRate == dstRate) return input
         val ratio = dstRate.toDouble() / srcRate.toDouble()

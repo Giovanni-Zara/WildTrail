@@ -168,7 +168,6 @@ fun AchievementsRoute(
                     total = state.definitions.size,
                 )
             }
-            // Earned first, locked next — visual reward for the user.
             val (earned, locked) = state.definitions.partition { it.achievementId in state.earnedIds }
             if (earned.isNotEmpty()) {
                 item { SectionHeader("Unlocked") }

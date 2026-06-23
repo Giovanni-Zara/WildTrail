@@ -9,14 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Compose UI test for the **stateless** [LoginContent]. Because the
- * Composable is stateless we can drive it directly with constants — no
- * ViewModel, no Firebase. We assert that user actions invoke the
- * appropriate callbacks.
- *
- * EXPECTED for each test: the visible label changes / a callback is invoked.
- */
 class LoginScreenTest {
 
     @get:Rule val composeTestRule = createComposeRule()

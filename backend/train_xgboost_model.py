@@ -23,8 +23,6 @@ FEATURE_COLUMNS = [
 ]
 TARGET_COLUMN = "duration_min"
 
-# Same edges used by the generator's length bins -- used here only to build a
-# stratification key and for the per-bucket evaluation breakdown.
 LENGTH_BUCKET_EDGES = np.geomspace(0.05, 40.0, 17)
 
 
@@ -76,13 +74,6 @@ def train_model(
         stratify=stratify_key,
     )
 
-    # Train on log1p(duration), not raw minutes. duration_min spans ~0.5 to ~5000
-    # (4 orders of magnitude). Optimizing raw MAE/MSE on that range means the
-    # loss is dominated by long hikes -- a 50-min miss on a 1000-min hike and a
-    # 1-min miss on a 2-min hike contribute similarly to squared error, so the
-    # optimizer all but ignores the short end. Log-space makes the loss track
-    # *relative* error uniformly at every scale, which is what "accurate
-    # independent of length" actually requires.
     y_train_log = np.log1p(y_train)
 
     model = HistGradientBoostingRegressor(
@@ -109,10 +100,6 @@ def train_model(
         "features": list(features.columns),
     }
 
-    # The metric that actually matters for "robust regardless of length": MAE
-    # naturally grows with hike duration (a 1-minute miss on a 3-minute hike and
-    # a 1-minute miss on a 300-minute hike are not the same kind of error), so
-    # MAPE per length-bucket is the number to watch for uniformity, not MAE.
     length_bucket_test = pd.cut(
         x_test["lunghezza"], bins=LENGTH_BUCKET_EDGES, labels=False, include_lowest=True
     ).astype(str)

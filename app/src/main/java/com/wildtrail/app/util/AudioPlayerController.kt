@@ -8,12 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-/**
- * Tiny Compose-friendly controller around [MediaPlayer] for playing back
- * one audio clip at a time. The UI calls [toggle] with the file path it
- * wants to play; tapping the same path again pauses it. Switching to a
- * different file releases the previous player automatically.
- */
 class AudioPlayerController {
     private var player: MediaPlayer? = null
     var playingPath: String? by mutableStateOf(null)

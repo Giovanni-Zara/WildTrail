@@ -10,20 +10,6 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * Lightweight, on-device "what's in this photo?" describer powered by
- * Google ML Kit Image Labeling.
- *
- *  - Bundled model — labels ~400 common entities (animals, plants,
- *    monuments, everyday objects) with confidence scores.
- *  - Free, no API key, no network — runs entirely on the device, so it
- *    works on the trail with no signal.
- *  - The model is ~3 MB shipped with the APK.
- *
- * Not a chat LLM — it can't write paragraphs — but it perfectly fits the
- * "tell me roughly what this photo is" use-case while respecting the
- * "no paid API keys, lightweight, runs on a phone" constraint.
- */
 class PhotoDescriber {
 
     private val labeler by lazy {
@@ -34,11 +20,6 @@ class PhotoDescriber {
         )
     }
 
-    /**
-     * Inspect [file] and return a short human-readable description of
-     * what's in it. Falls back to a friendly placeholder when the labeler
-     * has nothing confident to say.
-     */
     suspend fun describe(file: File): String = withContext(Dispatchers.Default) {
         val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             ?: return@withContext "Couldn't read this photo"

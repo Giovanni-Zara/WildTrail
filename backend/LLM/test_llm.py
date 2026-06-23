@@ -41,8 +41,8 @@ try:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        temperature=0.3,   # bassa per mantenere il riassunto fedele ai dati
-        max_tokens=300,    # sufficiente per 3 sfrasi
+        temperature=0.3,
+        max_tokens=300,
     )
 
     summary = response.choices[0].message.content

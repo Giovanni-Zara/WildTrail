@@ -66,7 +66,6 @@ fun HomeContent(
     LaunchedEffect(refreshing) {
         if (refreshing) {
             onRefresh()
-            // Hold the indicator visible for ~900ms so the user can see it spin.
             kotlinx.coroutines.delay(900L)
             refreshing = false
         }
@@ -132,10 +131,6 @@ fun HomeContent(
     }
 }
 
-/**
- * Animated gradient hero: a personal greeting over the [AuroraHeader] banner,
- * with the user's headline stats as frosted "glass" tiles.
- */
 @Composable
 private fun HomeHero(user: User?) {
     AuroraHeader(
@@ -162,8 +157,6 @@ private fun HomeHero(user: User?) {
                 )
             }
             if (user != null) {
-                // Stat tiles centred in the space below the greeting; each tile
-                // takes an equal weighted slice so all four fit and stay even.
                 Box(
                     modifier = Modifier
                         .weight(1f)

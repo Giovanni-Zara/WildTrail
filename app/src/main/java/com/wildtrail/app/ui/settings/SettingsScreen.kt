@@ -50,17 +50,6 @@ import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import androidx.compose.foundation.text.KeyboardOptions
 import com.wildtrail.app.ui.profile.ProfileViewModel
 
-/**
- * Edit-your-own-profile screen, reached via the gear icon on the Profile
- * tab. We re-use [ProfileViewModel] (targetUid = null → the logged-in
- * user) so we already have a live [com.wildtrail.app.domain.model.User]
- * and a working `updateProfile` action.
- *
- * For now we expose bio, country, and emergency contact — the immutable
- * pieces (username, sex, date of birth) are intentionally read-only here
- * because changing them retroactively would corrupt denormalised data on
- * existing hikes / comments.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsRoute(
@@ -124,7 +113,6 @@ fun SettingsRoute(
                 isUploading = state.uploadingPicture,
             )
 
-            // --- Read-only header ---------------------------------------
             Text("Account", style = MaterialTheme.typography.titleLarge)
             ReadOnlyRow("Username", user.username)
             ReadOnlyRow(
@@ -137,7 +125,6 @@ fun SettingsRoute(
             } ?: "—"
             ReadOnlyRow("Age", ageText)
 
-            // --- Editable fields ----------------------------------------
             Spacer(Modifier.height(8.dp))
             Text("Editable", style = MaterialTheme.typography.titleLarge)
 

@@ -10,23 +10,9 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
-/**
- * Room only supports a small set of column types out-of-the-box (primitives,
- * String, ByteArray). Anything richer needs a [TypeConverter] that serialises
- * it to one of those types on the way down and back on the way up.
- *
- * For collections we use Kotlinx Serialization to encode JSON into a TEXT
- * column. JSON keeps the data human-readable in Database Inspector, which is
- * very handy when debugging hike routes.
- *
- * For enums we just store the string name — enough for our purposes and
- * survives reordering of enum constants without DB migrations.
- */
 object Converters {
 
     private val json = Json { ignoreUnknownKeys = true }
-
-    // ---- List<GeoPoint> <-> JSON ----------------------------------------
 
     @TypeConverter
     @JvmStatic
@@ -37,8 +23,6 @@ object Converters {
     @JvmStatic
     fun jsonToGeoPointList(value: String): List<GeoPoint> =
         json.decodeFromString(ListSerializer(GeoPoint.serializer()), value)
-
-    // ---- List<HikeMediaItem> <-> JSON -----------------------------------
 
     @TypeConverter
     @JvmStatic
@@ -52,8 +36,6 @@ object Converters {
             json.decodeFromString(ListSerializer(HikeMediaItem.serializer()), value)
         }.getOrDefault(emptyList())
 
-    // ---- List<String> <-> JSON ------------------------------------------
-
     @TypeConverter
     @JvmStatic
     fun stringListToJson(value: List<String>): String =
@@ -64,8 +46,7 @@ object Converters {
     fun jsonToStringList(value: String): List<String> =
         json.decodeFromString(ListSerializer(String.serializer()), value)
 
-    // ---- Enums <-> String -----------------------------------------------
-
+    // enums stored by name so reordering the constants doesn't require a migration
     @TypeConverter
     @JvmStatic
     fun surfaceTypeToString(value: SurfaceType): String = value.name

@@ -6,12 +6,6 @@ import com.wildtrail.app.domain.model.SurfaceType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Round-trip tests for the Room [Converters]. Each converter has one
- * "encode" method and one "decode" — composing them must be the identity.
- *
- * EXPECTED for every test: the value going in equals the value coming out.
- */
 class ConvertersTest {
 
     @Test

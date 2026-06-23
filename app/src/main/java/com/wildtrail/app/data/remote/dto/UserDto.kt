@@ -4,16 +4,6 @@ import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 
-/**
- * Firestore document shape for the `users` collection.
- *
- * Firestore deserialises into POJOs via reflection — the class therefore needs:
- *  - a no-arg constructor (achieved by giving every field a default value)
- *  - public properties (Kotlin `var` works)
- *
- * We deliberately keep this DTO separate from [User] so changes to the cloud
- * shape don't ripple through the whole UI.
- */
 data class UserDto(
     var firebaseUid: String = "",
     var username: String = "",

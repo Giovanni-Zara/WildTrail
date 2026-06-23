@@ -1,28 +1,3 @@
-"""
-simulate_predictions.py
-
-Lets you build a user profile + a hike and see what the duration model predicts,
-without spinning up Flask. Reuses the exact same feature-building logic as
-predict_api.py / weather_proxy.py, so results match what your API would return.
-
-USAGE
------
-Run built-in test scenarios (good for spotting weak spots, e.g. short hikes):
-    python simulate_predictions.py
-
-Run a single custom prediction:
-    python simulate_predictions.py --custom \
-        --xp 1500 --eta 28 --past-hikes 12 --avg-speed 4.5 \
-        --length 2.0 --elevation 80 --surface forest --difficulty 1
-
-Interactive prompts:
-    python simulate_predictions.py --interactive
-
-By default it loads models/duration_model.joblib + models/feature_columns.json
-from this folder. Point MODEL_PATH / FEATURES_PATH env vars (or --model-path /
---features-path) at your real PythonAnywhere artifacts to test the exact
-deployed model instead.
-"""
 from __future__ import annotations
 
 import argparse
@@ -79,8 +54,6 @@ def predict_duration(model, feature_columns, user: dict, hike: dict) -> float:
 
 
 def training_density(train_df: pd.DataFrame | None, length: float, window: float = 1.0) -> int | None:
-    """Rough confidence proxy: how many training rows have a similar hike length.
-    Low numbers mean the model is extrapolating into sparse territory."""
     if train_df is None:
         return None
     nearby = train_df[

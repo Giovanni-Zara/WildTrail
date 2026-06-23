@@ -17,18 +17,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-/**
- * GPS sampler used by the tracking screen / ViewModel.
- *
- * The fused-location provider chooses the best source automatically (GPS,
- * Wi-Fi, cell). We request HIGH_ACCURACY because hikes need precise traces;
- * for an idle screen you'd downgrade to BALANCED to save battery (one of
- * the energy-efficiency considerations called out in the assignment).
- *
- * Permission handling is **not** done here — callers must request the
- * runtime permissions first. We expose a clean Flow of [GeoPoint] so the
- * rest of the app stays platform-agnostic.
- */
 class LocationTracker(private val context: Context) {
 
     private val client by lazy { LocationServices.getFusedLocationProviderClient(context) }
@@ -43,13 +31,6 @@ class LocationTracker(private val context: Context) {
         return fine || coarse
     }
 
-    /**
-     * Cold flow that emits a [GeoPoint] every [intervalMs]. Cancels the
-     * underlying callback when the collector goes away.
-     *
-     * Throws [SecurityException] if permission has been revoked at runtime —
-     * we suppress the lint check because we DO check it in [hasLocationPermission].
-     */
     @SuppressLint("MissingPermission")
     fun observeLocation(intervalMs: Long = 2_000L): Flow<GeoPoint> = callbackFlow {
         if (!hasLocationPermission()) {

@@ -4,12 +4,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import com.wildtrail.app.domain.model.Like
 
-/**
- * Compound primary key (userUid, hikeId) — one row per (user, hike) pair.
- *
- * No FK constraints — cross-device sync may reference users we don't have
- * locally (e.g. another user liked our hike).
- */
 @Entity(
     tableName = "likes",
     primaryKeys = ["userUid", "hikeId"],

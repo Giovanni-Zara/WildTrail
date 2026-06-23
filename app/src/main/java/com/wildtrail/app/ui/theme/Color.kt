@@ -2,21 +2,6 @@ package com.wildtrail.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Material 3 colour tokens for WildTrail.
- *
- * The palette is a modern "trail at dawn" scheme: a vivid **emerald** brand,
- * a **moss** support green, and a **teal/water** accent. Tonal roles are filled
- * in explicitly (container + on-container for every key role, plus surface
- * variants and outlines) so cards, chips, gradients and buttons all have depth
- * instead of falling back to flat Material defaults.
- *
- * The accent gradients used around the app (hero banners, score badges, the
- * rating gauge) are built from `primary → tertiary → secondary`, so tweaking
- * these three values re-themes every dynamic visual at once.
- */
-
-// ---- Brand emerald (primary) -------------------------------------------
 val Emerald90 = Color(0xFFA8F2C2)
 val Emerald80 = Color(0xFF7AD79E)
 val Emerald40 = Color(0xFF1C6B43)
@@ -24,7 +9,6 @@ val Emerald30 = Color(0xFF0D502F)
 val Emerald20 = Color(0xFF00391E)
 val Emerald10 = Color(0xFF00210F)
 
-// ---- Moss (secondary) ---------------------------------------------------
 val Moss90 = Color(0xFFD3E8D6)
 val Moss80 = Color(0xFFB4CCB9)
 val Moss40 = Color(0xFF4E6B57)
@@ -32,7 +16,6 @@ val Moss30 = Color(0xFF364B3D)
 val Moss20 = Color(0xFF203527)
 val Moss10 = Color(0xFF0B1F14)
 
-// ---- Teal / water (tertiary) -------------------------------------------
 val Teal90 = Color(0xFFA6EEF6)
 val Teal80 = Color(0xFF82D3DE)
 val Teal40 = Color(0xFF18707E)
@@ -40,13 +23,12 @@ val Teal30 = Color(0xFF00525C)
 val Teal20 = Color(0xFF003A41)
 val Teal10 = Color(0xFF001F24)
 
-// ---- Neutrals (surfaces / text) ----------------------------------------
-val Sand = Color(0xFFF6FBF3)          // light background/surface
+val Sand = Color(0xFFF6FBF3)
 val SandDim = Color(0xFFEDF3EA)
-val Charcoal = Color(0xFF0E140E)      // dark background/surface
+val Charcoal = Color(0xFF0E140E)
 val CharcoalHigh = Color(0xFF161D15)
-val InkLight = Color(0xFF171D17)      // on-light text
-val InkDark = Color(0xFFE0E4DB)       // on-dark text
+val InkLight = Color(0xFF171D17)
+val InkDark = Color(0xFFE0E4DB)
 
 val SurfaceVariantLight = Color(0xFFDCE5DA)
 val OnSurfaceVariantLight = Color(0xFF414941)
@@ -58,7 +40,6 @@ val OutlineVariantLight = Color(0xFFC0C9BD)
 val OutlineDark = Color(0xFF8B938A)
 val OutlineVariantDark = Color(0xFF414941)
 
-// ---- Errors -------------------------------------------------------------
 val ErrorLight = Color(0xFFBA1A1A)
 val ErrorContainerLight = Color(0xFFFFDAD6)
 val OnErrorContainerLight = Color(0xFF410002)

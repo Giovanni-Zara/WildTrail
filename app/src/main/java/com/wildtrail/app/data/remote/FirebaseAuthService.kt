@@ -8,29 +8,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-/**
- * Thin wrapper over [FirebaseAuth] that exposes:
- *  - login / signup as suspending functions ([await] from kotlinx-coroutines-play-services),
- *  - the current user as a hot [Flow] driven by [FirebaseAuth.AuthStateListener].
- *
- * The wrapper makes the Repository layer trivially testable: in unit tests
- * we can replace this object with a fake.
- */
-/** `open` so that tests can substitute a no-op subclass without needing
- *  `mockito-inline`. Production code uses the real [FirebaseAuth] backed
- *  default constructor. */
 open class FirebaseAuthService(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
 ) {
 
-    /** The current logged-in [FirebaseUser], or null if signed out. */
     open val currentUser: FirebaseUser? get() = auth.currentUser
 
-    /** Hot stream that emits whenever the auth state changes. */
     open fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser) }
         auth.addAuthStateListener(listener)
-        // Emit current value immediately so collectors don't have to wait.
         trySend(auth.currentUser)
         awaitClose { auth.removeAuthStateListener(listener) }
     }
@@ -47,32 +33,18 @@ open class FirebaseAuthService(
 
     open fun signOut() = auth.signOut()
 
-    /** The signed-in account's email, or null if signed out. */
     open val currentEmail: String? get() = auth.currentUser?.email
 
-    /**
-     * Updates the password of the signed-in user. Firebase requires a
-     * *recent* login for this; if the session is stale it throws
-     * `FirebaseAuthRecentLoginRequiredException`, which the caller surfaces
-     * to the user as "please sign in again".
-     */
     open suspend fun updatePassword(newPassword: String) {
         val user = auth.currentUser ?: error("Not signed in")
         user.updatePassword(newPassword).await()
     }
 
-    /**
-     * Starts an email change. Modern Firebase doesn't change the address
-     * immediately — it sends a verification link to [newEmail]; the address
-     * only switches once the user clicks it. Also needs a recent login.
-     */
     open suspend fun sendEmailChangeVerification(newEmail: String) {
         val user = auth.currentUser ?: error("Not signed in")
         user.verifyBeforeUpdateEmail(newEmail).await()
     }
 
-    /** Exchanges a Google ID token (from Credential Manager) for a Firebase
-     *  user. Caller is responsible for actually obtaining the token. */
     open suspend fun signInWithGoogleIdToken(idToken: String): FirebaseUser {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         val result = auth.signInWithCredential(credential).await()

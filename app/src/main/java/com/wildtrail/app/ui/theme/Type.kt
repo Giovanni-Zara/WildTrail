@@ -6,17 +6,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/**
- * Material 3 type scale, customised for a more expressive, modern feel:
- * heavier display/headline weights and slightly tightened letter spacing on
- * the large roles (a contemporary "editorial" look), with comfortable body
- * line-heights for readability.
- *
- * We use the system default font ([FontFamily.Default]) so the app picks up
- * the user's preferred font on devices where that's been customised
- * (accessibility / personalisation). Using the role names everywhere keeps the
- * typography consistent and scalable.
- */
 val WildTrailTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,

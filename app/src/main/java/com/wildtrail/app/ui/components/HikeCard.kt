@@ -39,17 +39,6 @@ import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
 import com.wildtrail.app.util.formatHikeDate
 
-/**
- * Stateless card for a single hike in a list. All inputs are plain Kotlin
- * values + callbacks (UDF) — the card never observes a flow itself.
- *
- *  - `isLiked` + `onLikeClick` drive the heart at top-right.
- *  - The creator row at the top is built from the *denormalised* creator
- *    fields on [HikeLog] (so it never blank-flashes while the user doc
- *    syncs) and is itself clickable when `onCreatorClick` is provided.
- *  - Characteristics are rendered as a [FlowRow] of small chips so they
- *    wrap onto multiple lines on narrow screens instead of overflowing.
- */
 @Composable
 fun HikeCard(
     hike: HikeLog,
@@ -58,13 +47,7 @@ fun HikeCard(
     isLiked: Boolean = false,
     onLikeClick: (() -> Unit)? = null,
     onCreatorClick: ((String) -> Unit)? = null,
-    /** Uid of the currently signed-in user. If it matches the creator, the
-     *  card shows "You" instead of the cached creator name. */
     currentUserUid: String? = null,
-    /** Signed-in user's *live* profile picture. For the user's own hikes we
-     *  prefer this over the denormalised [HikeLog.creatorProfilePictureUrl]
-     *  so a freshly-picked picture shows immediately, without waiting for
-     *  the creator-info re-stamp to propagate. */
     currentUserProfilePictureUrl: String? = null,
 ) {
     val isOwnHike = currentUserUid != null && currentUserUid == hike.creatorFirebaseUid
@@ -76,7 +59,7 @@ fun HikeCard(
     val displayName = when {
         isOwnHike -> "You"
         hike.creatorUsername.isNotBlank() -> hike.creatorUsername
-        else -> "Hiker" // Friendlier than "user" while a backfill is pending.
+        else -> "Hiker"
     }
     Card(
         onClick = onClick,
@@ -87,7 +70,6 @@ fun HikeCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // ----- Creator row ------------------------------------------------
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -129,7 +111,6 @@ fun HikeCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // ----- Cover photo ------------------------------------------------
             if (hike.coverPhotoUrl != null) {
                 AsyncImage(
                     model = hike.coverPhotoUrl,
@@ -143,7 +124,6 @@ fun HikeCard(
                 Spacer(Modifier.height(12.dp))
             }
 
-            // ----- Title + recorded date + description -----------------------
             Text(text = hike.title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "Recorded ${formatHikeDate(hike.endedAt)}",
@@ -161,7 +141,6 @@ fun HikeCard(
                 )
             }
 
-            // ----- Route shape thumbnail (lightweight Canvas drawing) --------
             if (hike.routeCoordinates.size >= 2) {
                 Spacer(Modifier.height(10.dp))
                 RouteThumbnail(
@@ -174,7 +153,6 @@ fun HikeCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // ----- Primary stats row (always single line, horizontal) ---------
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -187,7 +165,6 @@ fun HikeCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // ----- Community rating -------------------------------------------
             if (hike.reviewCount > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StarRow(rating = hike.averageRating)
@@ -206,10 +183,6 @@ fun HikeCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // ----- Characteristics chips (always one row) ---------------------
-            // A non-wrapping Row with each chip weighted equally keeps all four
-            // on the same line regardless of label length. (A FlowRow used to
-            // wrap the longest surface label, "🏔 Mountain", onto a 2nd line.)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -265,12 +238,6 @@ private fun LikeControl(isLiked: Boolean, count: Int, onClick: (() -> Unit)?) {
     }
 }
 
-/**
- * A compact, non-interactive condition pill. Designed to sit in a weighted
- * [Row] so four of them divide the card width evenly and never wrap; the label
- * centres and (only if it ever had to) ellipsises rather than pushing onto a
- * second line.
- */
 @Composable
 private fun CharChip(text: String, modifier: Modifier = Modifier) {
     Surface(

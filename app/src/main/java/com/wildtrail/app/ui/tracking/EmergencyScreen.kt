@@ -61,19 +61,6 @@ import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-/**
- * Full-screen modal shown after a fall is confirmed. Rendered as a [Dialog]
- * so it floats above everything (including the bottom nav bar), with a dark
- * semi-transparent background to grab attention.
- *
- * It owns three side effects, all lifecycle-scoped to its own composition:
- *  - a strong haptic waveform on appearance ([LaunchedEffect]),
- *  - a spoken Text-to-Speech prompt ([DisposableEffect] releases the engine),
- *  - an animated [countdownSeconds]s countdown that calls [onCountdownFinished]
- *    if it reaches zero un-cancelled.
- *
- * @param onCancel invoked when the user completes the swipe-to-cancel gesture.
- */
 @Composable
 fun EmergencyOverlay(
     contactName: String,
@@ -83,10 +70,8 @@ fun EmergencyOverlay(
 ) {
     val context = LocalContext.current
 
-    // Strong haptic pulse the moment the overlay appears.
     LaunchedEffect(Unit) { triggerFallVibration(context) }
 
-    // Spoken prompt, with the TTS engine released when the overlay leaves.
     DisposableEffect(Unit) {
         var tts: TextToSpeech? = null
         tts = TextToSpeech(context) { status ->
@@ -107,9 +92,6 @@ fun EmergencyOverlay(
         }
     }
 
-    // Animated countdown: progress 1f -> 0f over the full duration. Keyed on
-    // Unit so it runs exactly once; rememberUpdatedState keeps the callback
-    // current without restarting the animation.
     val progress = remember { Animatable(1f) }
     val finished by rememberUpdatedState(onCountdownFinished)
     LaunchedEffect(Unit) {
@@ -122,7 +104,7 @@ fun EmergencyOverlay(
     val remaining = ceil(progress.value * countdownSeconds).toInt().coerceIn(0, countdownSeconds)
 
     Dialog(
-        onDismissRequest = { /* dismissal only via swipe-to-cancel */ },
+        onDismissRequest = { },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = false,
@@ -188,7 +170,6 @@ private fun CountdownRing(progress: Float, remaining: Int) {
             val inset = strokeWidth / 2f
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             val topLeft = Offset(inset, inset)
-            // Track.
             drawArc(
                 color = Color.White.copy(alpha = 0.15f),
                 startAngle = -90f,
@@ -198,7 +179,6 @@ private fun CountdownRing(progress: Float, remaining: Int) {
                 size = arcSize,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
             )
-            // Remaining time.
             drawArc(
                 color = ALERT_RED,
                 startAngle = -90f,
@@ -218,12 +198,6 @@ private fun CountdownRing(progress: Float, remaining: Int) {
     }
 }
 
-/**
- * Large high-contrast "Swipe to Cancel" control. A draggable thumb travels
- * across the track; releasing past [SWIPE_THRESHOLD_DP] (or the end of the
- * track, whichever is smaller) confirms the cancel. Anything short of that
- * springs the thumb back, so a shaky partial swipe never cancels by accident.
- */
 @Composable
 private fun SwipeToCancel(onCancel: () -> Unit) {
     val density = LocalDensity.current
@@ -286,11 +260,8 @@ private fun SwipeToCancel(onCancel: () -> Unit) {
     }
 }
 
-/** Distinct from the theme palette: this overlay is always dark, so it uses
- *  fixed high-contrast colours rather than [MaterialTheme]. */
 private val ALERT_RED = Color(0xFFFF5252)
 
-/** Swipe distance that confirms a cancel — large enough to be deliberate. */
 private const val SWIPE_THRESHOLD_DP = 150
 
 private fun triggerFallVibration(context: Context) {
@@ -302,7 +273,6 @@ private fun triggerFallVibration(context: Context) {
         context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
     } ?: return
     if (!vibrator.hasVibrator()) return
-    // Three escalating pulses (timing pairs of wait/buzz), full amplitude.
     val timings = longArrayOf(0, 500, 250, 500, 250, 800)
     val amplitudes = intArrayOf(0, 255, 0, 255, 0, 255)
     vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))

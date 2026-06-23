@@ -20,15 +20,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-/**
- * UDF state for the dedicated review-submission screen. Every field the form
- * collects lives here (state flows down to a stateless composable); the
- * screen only emits events back up via the ViewModel's `on…` methods.
- *
- * [isSubmitting] drives the loading spinner; [submitted] and [error] are
- * one-shot signals the screen consumes (navigate back / show snackbar) and
- * then clears.
- */
 data class SubmitReviewUiState(
     val overallRating: Int = 3,
     val difficultyLevel: Int = 3,
@@ -54,8 +45,6 @@ class SubmitReviewViewModel(
     private val _uiState = MutableStateFlow(SubmitReviewUiState())
     val uiState: StateFlow<SubmitReviewUiState> = _uiState.asStateFlow()
 
-    // ---- Events (flow up) ----------------------------------------------
-
     fun onOverallChange(value: Int) = _uiState.update { it.copy(overallRating = value) }
     fun onDifficultyChange(value: Int) = _uiState.update { it.copy(difficultyLevel = value) }
     fun onMudChange(value: Int) = _uiState.update { it.copy(mudRisk = value) }
@@ -65,17 +54,13 @@ class SubmitReviewViewModel(
     fun onWaterChange(value: Boolean) = _uiState.update { it.copy(waterAvailability = value) }
     fun onCommentChange(value: String) = _uiState.update { it.copy(commentText = value) }
 
-    /** De-dupe so re-picking the same photo doesn't stack duplicate copies. */
     fun onAddImages(uris: List<Uri>) =
         _uiState.update { it.copy(imageUris = (it.imageUris + uris).distinct()) }
 
     fun onRemoveImage(uri: Uri) =
         _uiState.update { it.copy(imageUris = it.imageUris - uri) }
 
-    /** Acknowledge the one-shot error after the snackbar has shown it. */
     fun onErrorShown() = _uiState.update { it.copy(error = null) }
-
-    // ---- Submission -----------------------------------------------------
 
     fun submit() {
         if (_uiState.value.isSubmitting) return
@@ -88,8 +73,6 @@ class SubmitReviewViewModel(
         _uiState.update { it.copy(isSubmitting = true, error = null) }
 
         viewModelScope.launch {
-            // Defense-in-depth: the Add-Review button is already hidden for the
-            // creator, but never let anyone review their own hike.
             val hike = hikeLogRepository.observeHike(hikeId).first()
             if (hike != null && hike.creatorFirebaseUid == uid) {
                 _uiState.update {

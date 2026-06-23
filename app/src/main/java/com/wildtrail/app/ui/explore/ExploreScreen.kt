@@ -114,16 +114,12 @@ fun ExploreContent(
             onRefresh = { refreshing = true },
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            // Single scroll container: the whole header (search row, sort row,
-            // filter menu) lives as the first LazyColumn items, so it scrolls
-            // away with the results instead of staying pinned.
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // ----- Row 1: search field + filter-menu toggle --------------
                 item {
                     Spacer(Modifier.height(8.dp))
                     Row(
@@ -142,7 +138,6 @@ fun ExploreContent(
                             Icon(
                                 imageVector = Icons.Default.FilterList,
                                 contentDescription = "Filters",
-                                // Highlighted while the menu is open or a filter is active.
                                 tint = if (state.isFilterMenuOpen || state.appliedFilter.isActive()) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
@@ -153,9 +148,6 @@ fun ExploreContent(
                     }
                 }
 
-                // ----- Row 2: sort chips (all four fixed across the width) ---
-                // Each chip takes an equal weighted slice so the full set is
-                // always visible and tappable without horizontal scrolling.
                 item {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -180,9 +172,6 @@ fun ExploreContent(
                     }
                 }
 
-                // ----- Row 3: expandable filter menu -------------------------
-                // Expand/collapse straight down from the top edge (no diagonal
-                // corner reveal) so the card simply drops beneath the sort row.
                 item {
                     AnimatedVisibility(
                         visible = state.isFilterMenuOpen,
@@ -201,7 +190,6 @@ fun ExploreContent(
                     }
                 }
 
-                // ----- Row 4: results / featured -----------------------------
                 val list = if (state.showingResults) state.results else state.featured
                 item {
                     SectionHeader(
@@ -237,10 +225,6 @@ fun ExploreContent(
     }
 }
 
-/**
- * Stateless filter menu. Renders the *draft* criteria and raises every change
- * as an event; nothing here filters on its own — only [onApply] commits.
- */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun FilterMenu(
@@ -259,7 +243,6 @@ private fun FilterMenu(
         ) {
             Text("Filters", style = MaterialTheme.typography.titleMedium)
 
-            // Distance (km)
             Text(
                 "Distance: ${filter.minKm.roundToInt()}–${filter.maxKm.roundToInt()} km",
                 style = MaterialTheme.typography.labelLarge,
@@ -270,7 +253,6 @@ private fun FilterMenu(
                 valueRange = 0f..HikeFilter.DISTANCE_MAX_KM,
             )
 
-            // Elevation gain (m)
             Text(
                 "Elevation gain: ${filter.minElevation}–${filter.maxElevation} m",
                 style = MaterialTheme.typography.labelLarge,
@@ -281,7 +263,6 @@ private fun FilterMenu(
                 valueRange = 0f..HikeFilter.ELEVATION_MAX_M.toFloat(),
             )
 
-            // Difficulty (multi-select)
             Text("Difficulty", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HikeFilter.DIFFICULTY_LEVELS.forEach { level ->
@@ -293,8 +274,6 @@ private fun FilterMenu(
                 }
             }
 
-            // Surface type (multi-select). Wraps onto multiple lines so all
-            // terrain options stay visible on narrow screens.
             Text("Surface type", style = MaterialTheme.typography.labelLarge)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -309,7 +288,6 @@ private fun FilterMenu(
                 }
             }
 
-            // Footer: Reset (draft only) + Apply (commits & filters)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -325,7 +303,6 @@ private fun FilterMenu(
     }
 }
 
-/** Human-readable label for a surface-type filter chip. */
 private fun SurfaceType.filterLabel(): String = when (this) {
     SurfaceType.MOUNTAIN -> "Mountain"
     SurfaceType.FOREST -> "Forest"

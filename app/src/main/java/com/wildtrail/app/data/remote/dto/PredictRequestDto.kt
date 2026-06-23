@@ -2,15 +2,6 @@ package com.wildtrail.app.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Top-level request body sent to POST /predict.
- *
- * The API expects exactly this JSON shape:
- * {
- *   "user": { "xp_points": 1500, "eta": 30, "past_hikes": 25, "avg_speed": 4.5 },
- *   "hike": { "lunghezza": 10.0, "elevation_gain": 400, "surface_type": "forest", "difficulty": 3 }
- * }
- */
 data class PredictRequestDto(
     val user: UserFeaturesDto,
     val hike: HikeFeaturesDto,

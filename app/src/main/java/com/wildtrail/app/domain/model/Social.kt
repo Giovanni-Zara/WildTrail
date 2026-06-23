@@ -1,9 +1,5 @@
 package com.wildtrail.app.domain.model
 
-/**
- * One row per (follower -> followee) relationship.
- * UNIQUE on (followerUid, followeeUid) at the DAO level.
- */
 data class UserFollow(
     val followerUid: String,
     val followeeUid: String,
@@ -11,10 +7,6 @@ data class UserFollow(
     val createdAt: Long,
 )
 
-/**
- * "I'm following this trail" — used so users can subscribe to a hike and
- * get notified when reviews are added.
- */
 data class FollowedTrail(
     val userUid: String,
     val hikeId: String,
@@ -22,7 +14,6 @@ data class FollowedTrail(
     val createdAt: Long,
 )
 
-/** A comment on a hike. Photos URLs are stored as a list. */
 data class HikeComment(
     val commentId: String,
     val authorUid: String,

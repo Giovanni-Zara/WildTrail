@@ -5,11 +5,6 @@ import androidx.room.PrimaryKey
 import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 
-/**
- * Room representation of a user. The primary key is [firebaseUid] so that the
- * same id we use for auth + Firestore is also the cache key — no second
- * "local id" column to keep in sync.
- */
 @Entity(tableName = "users")
 data class UserEntity(
     @PrimaryKey val firebaseUid: String,
@@ -28,8 +23,6 @@ data class UserEntity(
     val lastActive: Long,
     val isPublic: Boolean,
 )
-
-// --- Mapping helpers (entity <-> domain) ---------------------------------
 
 fun UserEntity.toDomain(): User = User(
     firebaseUid = firebaseUid,
