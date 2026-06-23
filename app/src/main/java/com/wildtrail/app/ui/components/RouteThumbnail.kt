@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
@@ -45,12 +46,17 @@ fun RouteThumbnail(
             return@BoxWithConstraints
         }
 
-        val widthPx = constraints.maxWidth
-        val heightPx = constraints.maxHeight
+        // Map zoom levels are defined in density-independent pixels, but Compose constraints
+        // are in physical pixels — convert, or we over-zoom on high-density screens and clip.
+        val density = LocalDensity.current.density
+        val widthDp = constraints.maxWidth / density
+        val heightDp = constraints.maxHeight / density
 
-        val camera = remember(latLngs, widthPx, heightPx) {
+        // Lite-mode maps render a static snapshot from the *initial* camera position and ignore
+        // later camera changes, so the correct fit must be computed up front, not after load.
+        val camera = remember(latLngs, widthDp, heightDp) {
             val bounds = LatLngBounds.Builder().apply { latLngs.forEach { include(it) } }.build()
-            CameraPosition.fromLatLngZoom(bounds.center, boundsZoom(bounds, widthPx, heightPx))
+            CameraPosition.fromLatLngZoom(bounds.center, boundsZoom(bounds, widthDp, heightDp))
         }
 
         val cameraPositionState = remember(camera) { CameraPositionState(position = camera) }
@@ -77,16 +83,17 @@ private val NonInteractiveUiSettings = MapUiSettings(
     scrollGesturesEnabled = false,
     scrollGesturesEnabledDuringRotateOrZoom = false,
     tiltGesturesEnabled = false,
-    zoomControlsEnabled = false,
     zoomGesturesEnabled = false,
+    zoomControlsEnabled = false,
 )
 
-private const val WORLD_PX = 256.0
+private const val WORLD_DP = 256.0
 private const val MAX_ZOOM = 19.0
 
-private const val PADDING_FACTOR = 0.78
+// Fraction of each axis the route should occupy, leaving ~8% margin per side.
+private const val FIT_FRACTION = 0.84
 
-private fun boundsZoom(bounds: LatLngBounds, widthPx: Int, heightPx: Int): Float {
+private fun boundsZoom(bounds: LatLngBounds, widthDp: Float, heightDp: Float): Float {
     val ne = bounds.northeast
     val sw = bounds.southwest
 
@@ -94,14 +101,14 @@ private fun boundsZoom(bounds: LatLngBounds, widthPx: Int, heightPx: Int): Float
     val lngDiff = ne.longitude - sw.longitude
     val lngFraction = (if (lngDiff < 0) lngDiff + 360.0 else lngDiff) / 360.0
 
-    val latZoom = if (latFraction <= 0.0) MAX_ZOOM else zoomFor(heightPx * PADDING_FACTOR, latFraction)
-    val lngZoom = if (lngFraction <= 0.0) MAX_ZOOM else zoomFor(widthPx * PADDING_FACTOR, lngFraction)
+    val latZoom = if (latFraction <= 0.0) MAX_ZOOM else zoomFor(heightDp * FIT_FRACTION, latFraction)
+    val lngZoom = if (lngFraction <= 0.0) MAX_ZOOM else zoomFor(widthDp * FIT_FRACTION, lngFraction)
 
     return minOf(latZoom, lngZoom, MAX_ZOOM).coerceIn(2.0, MAX_ZOOM).toFloat()
 }
 
-private fun zoomFor(mapPx: Double, fraction: Double): Double =
-    ln(mapPx / WORLD_PX / fraction) / ln(2.0)
+private fun zoomFor(mapDp: Double, fraction: Double): Double =
+    ln(mapDp / WORLD_DP / fraction) / ln(2.0)
 
 private fun latRad(latDeg: Double): Double {
     val s = sin(latDeg * PI / 180.0)
