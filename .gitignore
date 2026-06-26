@@ -36,7 +36,6 @@ app/google-services.json
 # OS files
 .DS_Store
 
-# Claude Code local workspace
-.claude/
+
 backend/data/synthetic_hike_dataset.csv
 api.py
