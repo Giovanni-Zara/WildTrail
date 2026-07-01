@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.wildtrail.app.data.local.WildTrailDatabase
 import com.wildtrail.app.data.local.entity.UserEntity
 import com.wildtrail.app.data.remote.FirestoreService
+import com.wildtrail.app.data.remote.StorageService
 import com.wildtrail.app.data.remote.dto.HikeLogDto
 import com.wildtrail.app.domain.model.HikeLog
 import com.wildtrail.app.domain.model.SurfaceType
@@ -50,8 +51,10 @@ class HikeLogRepositoryTest {
             hikeLogDao = db.hikeLogDao(),
             likeDao = db.likeDao(),
             reviewDao = db.trailReviewDao(),
+            commentDao = db.hikeCommentDao(),
             userDao = db.userDao(),
             firestore = fakeFirestore,
+            storage = StorageService(),
             externalScope = scope,
         )
     }

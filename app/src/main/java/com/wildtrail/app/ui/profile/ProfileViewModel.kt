@@ -13,6 +13,7 @@ import com.wildtrail.app.data.repository.HikeLogRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.domain.model.AchievementDefinition
 import com.wildtrail.app.domain.model.HikeLog
+import com.wildtrail.app.domain.model.Sex
 import com.wildtrail.app.domain.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -133,6 +134,8 @@ class ProfileViewModel(
         bio: String?,
         country: String?,
         emergencyContactNumber: String? = null,
+        sex: Sex? = null,
+        dateOfBirth: Long? = null,
     ) {
         val current = uiState.value.user ?: return
         viewModelScope.launch {
@@ -143,6 +146,8 @@ class ProfileViewModel(
                         country = country,
                         emergencyContactNumber = emergencyContactNumber
                             ?: current.emergencyContactNumber,
+                        sex = sex ?: current.sex,
+                        dateOfBirth = dateOfBirth ?: current.dateOfBirth,
                     ),
                 )
             }

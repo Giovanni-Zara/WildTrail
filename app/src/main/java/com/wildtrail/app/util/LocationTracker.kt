@@ -13,13 +13,31 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.wildtrail.app.domain.model.GeoPoint
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 
 class LocationTracker(private val context: Context) {
 
     private val client by lazy { LocationServices.getFusedLocationProviderClient(context) }
+
+    // Hot stream the foreground LocationService publishes into while recording, so GPS
+    // keeps flowing with the screen off. The tracking VM observes this instead of holding
+    // its own location request.
+    private val _liveLocations = MutableSharedFlow<GeoPoint>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val liveLocations: SharedFlow<GeoPoint> = _liveLocations.asSharedFlow()
+
+    fun publishLocation(point: GeoPoint) {
+        _liveLocations.tryEmit(point)
+    }
 
     fun hasLocationPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(

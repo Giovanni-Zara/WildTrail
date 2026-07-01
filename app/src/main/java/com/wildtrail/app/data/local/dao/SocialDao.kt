@@ -62,4 +62,7 @@ interface HikeCommentDao {
 
     @Query("DELETE FROM hike_comments WHERE commentId = :id")
     suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM hike_comments WHERE hikeId = :hikeId")
+    suspend fun deleteForHike(hikeId: String)
 }

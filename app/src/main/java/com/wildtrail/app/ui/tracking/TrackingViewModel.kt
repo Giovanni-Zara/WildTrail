@@ -21,6 +21,7 @@ import com.wildtrail.app.domain.model.HikeMediaType
 import com.wildtrail.app.domain.model.SurfaceType
 import com.wildtrail.app.domain.usecase.DetectFallUseCase
 import com.wildtrail.app.domain.usecase.FallDetectionEvent
+import com.wildtrail.app.service.LocationServiceController
 import com.wildtrail.app.util.AudioRecorder
 import com.wildtrail.app.util.HikeMath
 import com.wildtrail.app.util.HikeMediaStore
@@ -66,6 +67,7 @@ const val EMERGENCY_COUNTDOWN_SECONDS = 15
 
 class TrackingViewModel(
     private val locationTracker: LocationTracker,
+    private val locationServiceController: LocationServiceController,
     private val hikeLogRepository: HikeLogRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
@@ -130,6 +132,7 @@ class TrackingViewModel(
         elapsedBeforePauseMs = 0L
         previewJob?.cancel()
         _uiState.update { it.copy(status = TrackingStatus.RECORDING, routePoints = emptyList(), errorMessage = null) }
+        locationServiceController.start()
         beginCollecting()
         beginTimer()
         startFallDetection()
@@ -139,6 +142,7 @@ class TrackingViewModel(
         if (_uiState.value.status != TrackingStatus.RECORDING) return
         elapsedBeforePauseMs += System.currentTimeMillis() - startTimeMs
         locationJob?.cancel()
+        locationServiceController.stop()
         stopFallDetection()
         _uiState.update { it.copy(status = TrackingStatus.PAUSED) }
     }
@@ -148,6 +152,7 @@ class TrackingViewModel(
         if (_uiState.value.emergency != null) return
         startTimeMs = System.currentTimeMillis()
         _uiState.update { it.copy(status = TrackingStatus.RECORDING) }
+        locationServiceController.start()
         beginCollecting()
         beginTimer()
         startFallDetection()
@@ -155,6 +160,7 @@ class TrackingViewModel(
 
     fun stop() {
         locationJob?.cancel()
+        locationServiceController.stop()
         stopFallDetection()
         if (_uiState.value.status == TrackingStatus.RECORDING) {
             elapsedBeforePauseMs += System.currentTimeMillis() - startTimeMs
@@ -300,6 +306,7 @@ class TrackingViewModel(
 
     fun resetAfterSave() {
         if (_uiState.value.isRecordingAudio) runCatching { audioRecorder.stop() }
+        locationServiceController.stop()
         stopFallDetection()
         val granted = locationTracker.hasLocationPermission()
         _uiState.value = TrackingUiState(hasPermission = granted)
@@ -358,7 +365,9 @@ class TrackingViewModel(
     private fun beginCollecting() {
         locationJob = viewModelScope.launch {
             try {
-                locationTracker.observeLocation(intervalMs = 2_000L).collect { point ->
+                // Fixes fed by the foreground LocationService, so they keep arriving
+                // with the screen off instead of pausing until the screen wakes.
+                locationTracker.liveLocations.collect { point ->
                     _uiState.update { state ->
                         val newRoute = state.routePoints + point
                         val distanceKm = HikeMath.totalDistanceKm(newRoute)
@@ -404,6 +413,7 @@ class TrackingViewModel(
                 val app = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as WildTrailApp)
                 TrackingViewModel(
                     locationTracker = app.container.locationTracker,
+                    locationServiceController = app.container.locationServiceController,
                     hikeLogRepository = app.container.hikeLogRepository,
                     userRepository = app.container.userRepository,
                     authRepository = app.container.authRepository,

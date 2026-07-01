@@ -1,5 +1,6 @@
 package com.wildtrail.app.data.remote
 
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.toObject
@@ -57,6 +58,25 @@ open class FirestoreService(
         hikes.document(dto.hikeId).set(dto).await()
     }
 
+    open suspend fun deleteHike(hikeId: String) {
+        hikes.document(hikeId).delete().await()
+    }
+
+    // Cascade helpers: delete every doc in a collection whose `hikeId` matches.
+    // Chunked into batches to stay under Firestore's 500-writes-per-batch limit.
+    private suspend fun deleteByHikeId(collection: CollectionReference, hikeId: String) {
+        val snap = collection.whereEqualTo("hikeId", hikeId).get().await()
+        snap.documents.chunked(400).forEach { chunk ->
+            val batch = realDb.batch()
+            chunk.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+        }
+    }
+
+    open suspend fun deleteReviewsForHike(hikeId: String) = deleteByHikeId(reviews, hikeId)
+    open suspend fun deleteCommentsForHike(hikeId: String) = deleteByHikeId(comments, hikeId)
+    open suspend fun deleteLikesForHike(hikeId: String) = deleteByHikeId(likes, hikeId)
+
     open fun observePublicHikes(limit: Long = 50): Flow<List<HikeLogDto>> = callbackFlow {
         val reg = hikes
             .orderBy("endedAt", Query.Direction.DESCENDING)
@@ -85,6 +105,10 @@ open class FirestoreService(
 
     open suspend fun upsertReview(dto: TrailReviewDto) {
         reviews.document(dto.reviewId).set(dto).await()
+    }
+
+    open suspend fun deleteReview(reviewId: String) {
+        reviews.document(reviewId).delete().await()
     }
 
     open fun observeReviewsForHike(hikeId: String): Flow<List<TrailReviewDto>> = callbackFlow {
@@ -119,6 +143,10 @@ open class FirestoreService(
 
     open suspend fun upsertComment(dto: HikeCommentDto) {
         comments.document(dto.commentId).set(dto).await()
+    }
+
+    open suspend fun deleteComment(commentId: String) {
+        comments.document(commentId).delete().await()
     }
 
     open fun observeCommentsForHike(hikeId: String): Flow<List<HikeCommentDto>> = callbackFlow {

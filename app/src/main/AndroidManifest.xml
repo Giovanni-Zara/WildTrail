@@ -64,6 +64,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Keeps GPS recording alive with the screen off / app backgrounded -->
+        <service
+            android:name=".service.LocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
     </application>
 
 </manifest>

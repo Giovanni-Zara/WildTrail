@@ -22,6 +22,7 @@ import com.wildtrail.app.data.repository.SensorRepository
 import com.wildtrail.app.data.repository.SocialRepository
 import com.wildtrail.app.data.repository.UserRepository
 import com.wildtrail.app.data.repository.WeatherRepository
+import com.wildtrail.app.service.LocationServiceController
 import com.wildtrail.app.util.BirdNetClassifier
 import com.wildtrail.app.util.HikeMediaStore
 import com.wildtrail.app.util.LocalImageStore
@@ -49,6 +50,7 @@ interface AppContainer {
     val reviewSummaryRepository: ReviewSummaryRepository
     val sensorRepository: SensorRepository
     val locationTracker: LocationTracker
+    val locationServiceController: LocationServiceController
     val hikeMediaStore: HikeMediaStore
     val photoDescriber: PhotoDescriber
     val birdNetClassifier: BirdNetClassifier
@@ -107,8 +109,10 @@ class DefaultAppContainer(context: Context) : AppContainer {
         hikeLogDao = database.hikeLogDao(),
         likeDao = database.likeDao(),
         reviewDao = database.trailReviewDao(),
+        commentDao = database.hikeCommentDao(),
         userDao = database.userDao(),
         firestore = firestore,
+        storage = storage,
         externalScope = appScope,
     )
 
@@ -161,6 +165,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
     )
 
     override val locationTracker: LocationTracker = LocationTracker(context)
+
+    override val locationServiceController: LocationServiceController =
+        LocationServiceController(context.applicationContext)
 
     override val hikeMediaStore: HikeMediaStore = HikeMediaStore(context.applicationContext)
 

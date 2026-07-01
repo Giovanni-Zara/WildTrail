@@ -1,6 +1,7 @@
 package com.wildtrail.app.ui.tracking
 
 import android.Manifest
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -91,6 +92,13 @@ fun TrackingRoute(
     }
 
     val context = LocalContext.current
+
+    // Lets the foreground-service notification show on Android 13+. The service still
+    // records GPS even if this is denied — only the ongoing notification is suppressed.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
+
     LaunchedEffect(Unit) {
         trackingViewModel.events.collect { event ->
             when (event) {
@@ -161,6 +169,9 @@ fun TrackingRoute(
                 status = state.status,
                 hasPermission = state.hasPermission,
                 onStart = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                     weatherViewModel.refreshWeather()
                     trackingViewModel.start()
                 },

@@ -19,4 +19,24 @@ open class StorageService(
         ref.putFile(localUri).await()
         return ref.downloadUrl.await().toString()
     }
+
+    /**
+     * Uploads a hike's captured photo/audio so other users can see and play it.
+     * [ext] is the file extension (e.g. "jpg" or "m4a"). Returns the public download URL.
+     */
+    open suspend fun uploadHikeMedia(
+        hikeId: String,
+        mediaId: String,
+        ext: String,
+        localUri: Uri,
+    ): String {
+        val ref = storage.reference.child("hike_media/$hikeId/$mediaId.$ext")
+        ref.putFile(localUri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
+    /** Best-effort cleanup of an uploaded file given its download URL. */
+    open suspend fun deleteByUrl(downloadUrl: String) {
+        storage.getReferenceFromUrl(downloadUrl).delete().await()
+    }
 }

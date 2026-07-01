@@ -27,4 +27,7 @@ interface LikeDao {
 
     @Query("SELECT hikeId FROM likes WHERE userUid = :uid")
     fun observeMyLikedHikeIds(uid: String): Flow<List<String>>
+
+    @Query("DELETE FROM likes WHERE hikeId = :hikeId")
+    suspend fun deleteForHike(hikeId: String)
 }

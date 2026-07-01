@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
@@ -38,7 +39,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -113,6 +116,9 @@ fun HikeDetailRoute(
         onToggleLike = viewModel::toggleLike,
         onRefresh = { scope.launch { viewModel.refresh() } },
         onSummarizeReviews = viewModel::summarizeReviews,
+        onDeleteHike = { viewModel.deleteHike(onDeleted = onBack) },
+        onDeleteReview = viewModel::deleteReview,
+        onDeleteComment = viewModel::deleteComment,
     )
 }
 
@@ -131,8 +137,12 @@ fun HikeDetailContent(
     onToggleLike: () -> Unit,
     onRefresh: () -> Unit,
     onSummarizeReviews: () -> Unit,
+    onDeleteHike: () -> Unit,
+    onDeleteReview: (String) -> Unit,
+    onDeleteComment: (String) -> Unit,
 ) {
     var refreshing by remember { mutableStateOf(false) }
+    var showDeleteHikeConfirm by remember { mutableStateOf(false) }
 
     LaunchedEffect(refreshing) {
         if (refreshing) {
@@ -140,6 +150,23 @@ fun HikeDetailContent(
             kotlinx.coroutines.delay(900L)
             refreshing = false
         }
+    }
+
+    if (showDeleteHikeConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteHikeConfirm = false },
+            title = { Text("Delete hike?") },
+            text = { Text("This permanently removes the hike and its photos/recordings for everyone. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteHikeConfirm = false
+                    onDeleteHike()
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteHikeConfirm = false }) { Text("Cancel") }
+            },
+        )
     }
 
     Scaffold(
@@ -158,6 +185,15 @@ fun HikeDetailContent(
                             count = state.likeCount,
                             onClick = onToggleLike,
                         )
+                    }
+                    if (state.isMyHike) {
+                        IconButton(onClick = { showDeleteHikeConfirm = true }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Delete hike",
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 },
             )
@@ -200,6 +236,8 @@ fun HikeDetailContent(
                 isOnline = isOnline,
                 onPredict = onPredict,
                 onSummarizeReviews = onSummarizeReviews,
+                onDeleteReview = onDeleteReview,
+                onDeleteComment = onDeleteComment,
             )
         }
     }
@@ -220,6 +258,8 @@ private fun HikeDetailBody(
     isOnline: Boolean,
     onPredict: () -> Unit,
     onSummarizeReviews: () -> Unit,
+    onDeleteReview: (String) -> Unit,
+    onDeleteComment: (String) -> Unit,
 ) {
     val hike = state.hike!!
     PullToRefreshBox(
@@ -322,6 +362,7 @@ private fun HikeDetailBody(
                             author = state.currentUserUid?.let { state.authors[it] },
                             onAuthorClick = { state.currentUserUid?.let(onUserClick) },
                             highlighted = true,
+                            onDelete = { onDeleteReview(myReview.reviewId) },
                         )
                     }
                 }
@@ -373,6 +414,11 @@ private fun HikeDetailBody(
                     comment = c,
                     author = state.authors[c.authorUid],
                     onAuthorClick = { onUserClick(c.authorUid) },
+                    onDelete = if (c.authorUid == state.currentUserUid) {
+                        { onDeleteComment(c.commentId) }
+                    } else {
+                        null
+                    },
                 )
             }
             item { CommentForm(onPost = onPostComment) }
@@ -616,7 +662,7 @@ private fun PhotoThumbnail(
             .clickable(onClick = onClick),
     ) {
         AsyncImage(
-            model = File(photo.filePath),
+            model = photoModel(photo.filePath),
             contentDescription = "Photo $number",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
@@ -640,9 +686,9 @@ private fun PhotoViewerDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val describer: PhotoDescriber = remember {
-        (context.applicationContext as WildTrailApp).container.photoDescriber
-    }
+    val container = remember { (context.applicationContext as WildTrailApp).container }
+    val describer: PhotoDescriber = remember { container.photoDescriber }
+    val mediaStore = remember { container.hikeMediaStore }
 
     var description by remember(photo.id) { mutableStateOf<String?>(null) }
     var failed by remember(photo.id) { mutableStateOf(false) }
@@ -650,7 +696,7 @@ private fun PhotoViewerDialog(
     LaunchedEffect(photo.id) {
         description = null
         failed = false
-        runCatching { describer.describe(File(photo.filePath)) }
+        runCatching { describer.describe(mediaStore.localFileFor(photo)) }
             .onSuccess { description = it }
             .onFailure { failed = true }
     }
@@ -692,7 +738,7 @@ private fun PhotoViewerDialog(
                 }
 
                 AsyncImage(
-                    model = File(photo.filePath),
+                    model = photoModel(photo.filePath),
                     contentDescription = "Photo $number",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -754,13 +800,17 @@ private sealed interface BirdScanState {
     data object Failed : BirdScanState
 }
 
+// Coil loads an http URL (remote media) directly; a bare on-device path needs a File.
+private fun photoModel(filePath: String): Any =
+    if (filePath.startsWith("http")) filePath else File(filePath)
+
 @Composable
 private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerController) {
     val isPlaying = controller.playingPath == audio.filePath
     val context = LocalContext.current
-    val classifier = remember {
-        (context.applicationContext as WildTrailApp).container.birdNetClassifier
-    }
+    val container = remember { (context.applicationContext as WildTrailApp).container }
+    val classifier = remember { container.birdNetClassifier }
+    val mediaStore = remember { container.hikeMediaStore }
     val scope = rememberCoroutineScope()
     var scan by remember(audio.id) { mutableStateOf<BirdScanState>(BirdScanState.Idle) }
 
@@ -793,7 +843,7 @@ private fun AudioRow(audio: HikeMediaItem, number: Int, controller: AudioPlayerC
                         } else {
                             scan = BirdScanState.Scanning
                             scope.launch {
-                                scan = runCatching { classifier.detect(File(audio.filePath)) }.fold(
+                                scan = runCatching { classifier.detect(mediaStore.localFileFor(audio)) }.fold(
                                     onSuccess = { birds ->
                                         if (birds.isEmpty()) BirdScanState.None
                                         else BirdScanState.Found(birds)
@@ -1063,8 +1113,27 @@ private fun ReviewRow(
     author: User?,
     onAuthorClick: () -> Unit,
     highlighted: Boolean = false,
+    onDelete: (() -> Unit)? = null,
 ) {
     var openedPhoto by remember { mutableStateOf<Int?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete review?") },
+            text = { Text("This permanently removes your review. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDelete()
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+        )
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1105,6 +1174,15 @@ private fun ReviewRow(
                     )
                 }
                 ScoreBadge(rating = review.overallRating)
+                if (onDelete != null) {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Delete review",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(14.dp))
@@ -1225,20 +1303,56 @@ private fun CommentRow(
     comment: HikeComment,
     author: User?,
     onAuthorClick: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete comment?") },
+            text = { Text("This permanently removes your comment.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDelete()
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     Card {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable(onClick = onAuthorClick),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                AvatarFromUrl(url = author?.profilePictureUrl, size = 32.dp)
-                Text(
-                    author?.username ?: "Unknown user",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onAuthorClick),
+                ) {
+                    AvatarFromUrl(url = author?.profilePictureUrl, size = 32.dp)
+                    Text(
+                        author?.username ?: "Unknown user",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Delete comment",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(6.dp))
             Text(comment.text, style = MaterialTheme.typography.bodyMedium)

@@ -20,13 +20,18 @@ class AudioPlayerController {
             return
         }
         stop()
+        val remote = path.startsWith("http")
         player = MediaPlayer().apply {
+            setOnCompletionListener { this@AudioPlayerController.stop() }
             setDataSource(path)
-            setOnCompletionListener {
-                this@AudioPlayerController.stop()
+            if (remote) {
+                // Network prepare must not block the main thread — start once ready.
+                setOnPreparedListener { it.start() }
+                prepareAsync()
+            } else {
+                prepare()
+                start()
             }
-            prepare()
-            start()
         }
         playingPath = path
     }

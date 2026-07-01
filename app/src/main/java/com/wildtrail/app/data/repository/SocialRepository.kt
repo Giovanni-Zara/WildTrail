@@ -74,6 +74,25 @@ class SocialRepository(
             .onFailure { Log.w(TAG, "Firestore review image sync skipped", it) }
     }
 
+    suspend fun deleteReview(review: TrailReview) {
+        reviewDao.deleteById(review.reviewId)
+        runCatching { firestore.deleteReview(review.reviewId) }
+            .onFailure { Log.w(TAG, "Firestore review delete skipped", it) }
+        // Best-effort cleanup of uploaded review images.
+        review.imageUrls
+            .filter { it.startsWith("http") }
+            .forEach { url ->
+                runCatching { storage.deleteByUrl(url) }
+                    .onFailure { Log.w(TAG, "Review image delete skipped", it) }
+            }
+    }
+
+    suspend fun deleteComment(commentId: String) {
+        commentDao.deleteById(commentId)
+        runCatching { firestore.deleteComment(commentId) }
+            .onFailure { Log.w(TAG, "Firestore comment delete skipped", it) }
+    }
+
     private suspend fun mergeKeepingLocalImages(dto: TrailReviewDto): TrailReviewEntity {
         val remote = dto.toDomain()
         if (remote.imageUrls.isNotEmpty()) return remote.toEntity()

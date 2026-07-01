@@ -221,6 +221,40 @@ class HikeDetailViewModel(
         }
     }
 
+    /** Deletes the hike if it belongs to the current user, then invokes [onDeleted] (e.g. navigate back). */
+    fun deleteHike(onDeleted: () -> Unit) {
+        val state = uiState.value
+        val hike = state.hike ?: return
+        if (!state.isMyHike) return
+        viewModelScope.launch {
+            runCatching { hikeLogRepository.deleteHike(hike) }
+            onDeleted()
+        }
+    }
+
+    fun deleteReview(reviewId: String) {
+        val state = uiState.value
+        val uid = state.currentUserUid ?: return
+        val review = state.reviews.firstOrNull { it.reviewId == reviewId } ?: return
+        if (review.reviewerUid != uid) return
+        viewModelScope.launch {
+            runCatching {
+                socialRepository.deleteReview(review)
+                hikeLogRepository.refreshAggregateRating(review.hikeId)
+            }
+        }
+    }
+
+    fun deleteComment(commentId: String) {
+        val state = uiState.value
+        val uid = state.currentUserUid ?: return
+        val comment = state.comments.firstOrNull { it.commentId == commentId } ?: return
+        if (comment.authorUid != uid) return
+        viewModelScope.launch {
+            runCatching { socialRepository.deleteComment(commentId) }
+        }
+    }
+
     suspend fun refresh() {
         runCatching { hikeLogRepository.refresh() }
     }

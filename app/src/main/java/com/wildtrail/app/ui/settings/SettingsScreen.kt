@@ -7,6 +7,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,17 +22,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,8 +57,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.wildtrail.app.domain.model.DEFAULT_EMERGENCY_NUMBER
+import com.wildtrail.app.domain.model.Sex
 import androidx.compose.foundation.text.KeyboardOptions
 import com.wildtrail.app.ui.profile.ProfileViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +82,8 @@ fun SettingsRoute(
     var emergency by remember(user?.emergencyContactNumber) {
         mutableStateOf(user?.emergencyContactNumber.orEmpty())
     }
+    var sex by remember(user?.sex) { mutableStateOf(user?.sex) }
+    var dob by remember(user?.dateOfBirth) { mutableStateOf(user?.dateOfBirth) }
     var savedFlash by remember { mutableStateOf(false) }
 
     LaunchedEffect(savedFlash) {
@@ -115,18 +132,18 @@ fun SettingsRoute(
 
             Text("Account", style = MaterialTheme.typography.titleLarge)
             ReadOnlyRow("Username", user.username)
-            ReadOnlyRow(
-                "Sex",
-                user.sex?.name?.lowercase()?.replace('_', ' ') ?: "—",
-            )
-            val ageText = user.dateOfBirth?.let { dob ->
-                val years = ageInYears(dob)
-                if (years > 0) "$years years old" else null
-            } ?: "—"
-            ReadOnlyRow("Age", ageText)
 
             Spacer(Modifier.height(8.dp))
             Text("Editable", style = MaterialTheme.typography.titleLarge)
+
+            Text("Sex", style = MaterialTheme.typography.labelLarge)
+            SexSelector(
+                selected = sex,
+                onChange = { sex = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            DateOfBirthPicker(millis = dob, onChange = { dob = it })
 
             OutlinedTextField(
                 value = country,
@@ -161,6 +178,8 @@ fun SettingsRoute(
                         country = country.trim().takeIf { it.isNotEmpty() },
                         emergencyContactNumber = emergency.trim()
                             .takeIf { it.isNotEmpty() } ?: DEFAULT_EMERGENCY_NUMBER,
+                        sex = sex,
+                        dateOfBirth = dob,
                     )
                     savedFlash = true
                 },
@@ -186,6 +205,117 @@ private fun ReadOnlyRow(label: String, value: String) {
         Text(label, style = MaterialTheme.typography.labelMedium)
         Text(value, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SexSelector(
+    selected: Sex?,
+    onChange: (Sex) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Sex.values().forEach { option ->
+            FilterChip(
+                selected = option == selected,
+                onClick = { onChange(option) },
+                label = { Text(option.label()) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateOfBirthPicker(
+    millis: Long?,
+    onChange: (Long) -> Unit,
+) {
+    var showPicker by remember { mutableStateOf(false) }
+    var inlineError by remember { mutableStateOf<String?>(null) }
+    val df = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+
+    Column {
+        OutlinedButton(
+            onClick = { showPicker = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Filled.CalendarMonth, contentDescription = null)
+            Spacer(Modifier.size(8.dp))
+            Text(
+                if (millis == null) "Date of birth"
+                else "Born ${df.format(Date(millis))} · ${ageInYears(millis)} yrs",
+            )
+        }
+        inlineError?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+            )
+        }
+    }
+
+    if (showPicker) {
+        val now = System.currentTimeMillis()
+        val minDob = remember { dobMillisYearsAgo(120) }
+        val maxDob = remember { dobMillisYearsAgo(13) }
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = millis ?: dobMillisYearsAgo(25),
+            selectableDates = object : androidx.compose.material3.SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    utcTimeMillis in minDob..maxDob
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    val nowYear = Calendar.getInstance().get(Calendar.YEAR)
+                    return year in (nowYear - 120)..(nowYear - 13)
+                }
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                Button(onClick = {
+                    val chosen = state.selectedDateMillis
+                    when {
+                        chosen == null -> inlineError = "Pick a date"
+                        chosen > now -> inlineError = "Date of birth cannot be in the future"
+                        chosen > maxDob -> inlineError = "You must be at least 13 years old"
+                        chosen < minDob -> inlineError = "Please pick a realistic date"
+                        else -> {
+                            inlineError = null
+                            onChange(chosen)
+                            showPicker = false
+                        }
+                    }
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Cancel") }
+            },
+            colors = DatePickerDefaults.colors(),
+        ) {
+            DatePicker(state = state)
+        }
+    }
+}
+
+private fun Sex.label(): String = when (this) {
+    Sex.MALE -> "Male"
+    Sex.FEMALE -> "Female"
+    Sex.OTHER -> "Other"
+    Sex.PREFER_NOT_TO_SAY -> "N/A"
+}
+
+private fun dobMillisYearsAgo(years: Int): Long {
+    val cal = Calendar.getInstance()
+    cal.add(Calendar.YEAR, -years)
+    return cal.timeInMillis
 }
 
 @Composable

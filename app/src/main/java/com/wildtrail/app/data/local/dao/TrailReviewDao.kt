@@ -22,6 +22,9 @@ interface TrailReviewDao {
     @Query("SELECT * FROM trail_reviews WHERE reviewId = :reviewId LIMIT 1")
     suspend fun getById(reviewId: String): TrailReviewEntity?
 
+    @Query("SELECT * FROM trail_reviews WHERE hikeId = :hikeId")
+    suspend fun getForHike(hikeId: String): List<TrailReviewEntity>
+
     @Query("SELECT AVG(difficultyLevel) FROM trail_reviews WHERE hikeId = :hikeId")
     fun observeAvgDifficulty(hikeId: String): Flow<Double?>
 
@@ -33,4 +36,7 @@ interface TrailReviewDao {
 
     @Query("DELETE FROM trail_reviews WHERE reviewId = :id")
     suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM trail_reviews WHERE hikeId = :hikeId")
+    suspend fun deleteForHike(hikeId: String)
 }
